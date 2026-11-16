@@ -1,0 +1,26 @@
+name: prompt-dashboard-agent
+
+# Runs ONLY on another machine that has 9router instances you want to monitor.
+# It exposes a small read-only HTTP API; the dashboard pulls requests from it.
+# See docs/servers.md.
+services:
+  agent:
+    build: .
+    image: prompt-dashboard:latest
+    container_name: prompt-dashboard-agent
+    restart: unless-stopped
+    command: ["node", "server/dist/agent-main.js"]
+    ports:
+      - "${AGENT_PORT:-9011}:9011"
+    environment:
+      AGENT_TOKEN: ${AGENT_TOKEN:?set AGENT_TOKEN in .env (at least 16 characters)}
+      AGENT_PORT: "9011"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9011/healthz >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      # One line per 9router: /opt/9router-X/data/db:/sources/X (the folder that holds data.sqlite).
+      # The files are opened read-only; the mount is rw only because WAL readers need the -shm file.
+      - /opt/9router-example/data/db:/sources/example

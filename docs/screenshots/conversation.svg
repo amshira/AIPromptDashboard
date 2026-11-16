@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="A conversation with tools and tokens">
+  <rect width="1280" height="720" fill="#f6f5f2"/>
+  <rect x="0" y="0" width="320" height="720" fill="#fcfcfb" stroke="#e1e0d9"/>
+  <text x="20" y="36" font-family="Segoe UI, sans-serif" font-size="16" font-weight="800" fill="#15140f">Conversations</text>
+  <text x="20" y="58" font-family="Segoe UI, sans-serif" font-size="12" fill="#6f6d67">96 threads · flytoday</text>
+  <rect x="12" y="78" width="296" height="72" rx="10" fill="#eceafd" stroke="#cfcaf8"/>
+  <text x="24" y="102" font-family="Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#15140f">Fix BookingService.spec.ts</text>
+  <text x="24" y="122" font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">M.Karimi · flytoday · Opus</text>
+  <text x="24" y="140" font-family="Segoe UI, sans-serif" font-size="11" fill="#4f46e5">3 turns · 12.4k tokens</text>
+  <text x="24" y="176" font-family="Segoe UI, sans-serif" font-size="13" fill="#15140f">Review this PR</text>
+  <text x="24" y="194" font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">S.Rezaei · flytoday</text>
+  <text x="24" y="230" font-family="Segoe UI, sans-serif" font-size="13" fill="#15140f">Hotel contract null check</text>
+  <text x="24" y="248" font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">P.Sahebi · hotel</text>
+  <rect x="336" y="16" width="928" height="688" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+  <text x="360" y="48" font-family="Segoe UI, sans-serif" font-size="18" font-weight="800" fill="#15140f">Fix the failing unit test in BookingService.spec.ts</text>
+  <text x="360" y="70" font-family="Segoe UI, sans-serif" font-size="12" fill="#6f6d67">M.Karimi · C:\Users\M.Karimi · claude-opus · 15 Nov 2026, 11:04</text>
+  <rect x="560" y="96" width="680" height="70" rx="12" fill="#fbf1ec"/>
+  <text x="576" y="122" font-family="Segoe UI, sans-serif" font-size="13" fill="#15140f">Fix the failing unit test in BookingService.spec.ts</text>
+  <text x="576" y="144" font-family="Segoe UI, sans-serif" font-size="13" fill="#15140f">and explain what was wrong.</text>
+  <rect x="360" y="182" width="720" height="88" rx="12" fill="#f1f0ec"/>
+  <text x="376" y="208" font-family="Segoe UI, sans-serif" font-size="13" fill="#15140f">Ill start by reading the test and the service, then run the suite.</text>
+  <rect x="376" y="222" width="688" height="36" rx="8" fill="#fcfcfb" stroke="#e1e0d9"/>
+  <text x="388" y="244" font-family="JetBrains Mono, Consolas, monospace" font-size="12" fill="#4f46e5">Bash  git diff main...HEAD --stat</text>
+  <rect x="360" y="286" width="760" height="210" rx="12" fill="#fcfcfb" stroke="#e1e0d9"/>
+  <text x="376" y="314" font-family="Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#15140f">What was wrong</text>
+  <text x="376" y="340" font-family="Segoe UI, sans-serif" font-size="13" fill="#52514e">" Hotel.cs can dereference a null booking when the DTO skips roomId.</text>
+  <text x="376" y="362" font-family="Segoe UI, sans-serif" font-size="13" fill="#52514e">" The test mocked book() but never awaited it, so the assertion ran too early.</text>
+  <rect x="376" y="380" width="520" height="96" rx="8" fill="#f1f0ec"/>
+  <text x="392" y="406" font-family="JetBrains Mono, Consolas, monospace" font-size="12" fill="#15140f">await service.book(dto);</text>
+  <text x="392" y="428" font-family="JetBrains Mono, Consolas, monospace" font-size="12" fill="#15140f">expect(repo.last.roomId).toBe(dto.roomId);</text>
+  <text x="392" y="450" font-family="JetBrains Mono, Consolas, monospace" font-size="12" fill="#6f6d67">// was: service.book(dto)   missing await</text>
+  <rect x="560" y="512" width="680" height="52" rx="12" fill="#fbf1ec"/>
+  <text x="576" y="542" font-family="Segoe UI, sans-serif" font-size="13" fill="#15140f">Thanks  please apply the fix as well.</text>
+  <rect x="360" y="580" width="400" height="48" rx="12" fill="#e5f4e5"/>
+  <text x="376" y="610" font-family="Segoe UI, sans-serif" font-size="13" fill="#006300">Done. The suite is green (24 passed).</text>
+  <text x="360" y="660" font-family="Segoe UI, sans-serif" font-size="12" fill="#6f6d67">Turn 3 of 3</text>
+  <text x="360" y="682" font-family="Segoe UI, sans-serif" font-size="12" fill="#15140f">“ 6,100 in   ‘ 780 out   cache 36,000   2.4s</text>
+</svg>

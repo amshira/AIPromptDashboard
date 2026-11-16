@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Overview: token use and activity">
+  <rect width="1280" height="720" fill="#f6f5f2"/>
+  <rect x="0" y="0" width="220" height="720" fill="#fcfcfb" stroke="#e1e0d9"/>
+  <text x="28" y="42" font-family="Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#15140f">Prompt Dashboard</text>
+  <rect x="16" y="68" width="188" height="34" rx="8" fill="#eceafd"/>
+  <text x="32" y="90" font-family="Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#4f46e5">Overview</text>
+  <text x="32" y="128" font-family="Segoe UI, sans-serif" font-size="13" fill="#6f6d67">Conversations</text>
+  <text x="32" y="158" font-family="Segoe UI, sans-serif" font-size="13" fill="#6f6d67">Daily report</text>
+  <text x="32" y="188" font-family="Segoe UI, sans-serif" font-size="13" fill="#6f6d67">Panels and access</text>
+  <text x="248" y="48" font-family="Segoe UI, sans-serif" font-size="22" font-weight="800" fill="#15140f">Overview</text>
+  <text x="248" y="72" font-family="Segoe UI, sans-serif" font-size="13" fill="#6f6d67">Token use and user activity across every 9router · 915 Nov 2026</text>
+  <g font-family="Segoe UI, sans-serif">
+    <rect x="248" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+    <text x="264" y="118" font-size="12" fill="#6f6d67">User messages</text>
+    <text x="264" y="148" font-size="26" font-weight="800" fill="#15140f">1,284</text>
+    <text x="264" y="170" font-size="11" fill="#6f6d67">96 conversations</text>
+    <rect x="420" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+    <text x="436" y="118" font-size="12" fill="#6f6d67">Requests</text>
+    <text x="436" y="148" font-size="26" font-weight="800" fill="#15140f">3,410</text>
+    <text x="436" y="170" font-size="11" fill="#6f6d67">+210 classifier / title</text>
+    <rect x="592" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+    <text x="608" y="118" font-size="12" fill="#6f6d67">Input tokens</text>
+    <text x="608" y="148" font-size="26" font-weight="800" fill="#15140f">4.2M</text>
+    <text x="608" y="170" font-size="11" fill="#6f6d67">“ prompts</text>
+    <rect x="764" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+    <text x="780" y="118" font-size="12" fill="#6f6d67">Output tokens</text>
+    <text x="780" y="148" font-size="26" font-weight="800" fill="#15140f">890k</text>
+    <text x="780" y="170" font-size="11" fill="#6f6d67">‘ completions</text>
+    <rect x="936" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+    <text x="952" y="118" font-size="12" fill="#6f6d67">Cache read</text>
+    <text x="952" y="148" font-size="26" font-weight="800" fill="#15140f">12.1M</text>
+    <text x="952" y="170" font-size="11" fill="#006300">74% cache hit</text>
+    <rect x="1108" y="96" width="148" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+    <text x="1124" y="118" font-size="12" fill="#6f6d67">People</text>
+    <text x="1124" y="148" font-size="26" font-weight="800" fill="#15140f">5</text>
+    <text x="1124" y="170" font-size="11" fill="#6f6d67">OS accounts</text>
+  </g>
+  <rect x="248" y="204" width="1008" height="268" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+  <text x="268" y="232" font-family="Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#15140f">Daily tokens by source</text>
+  <text x="268" y="252" font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">Stacked · flytoday · hotel · parto · devops</text>
+  <g transform="translate(280,270)">
+    <line x1="0" y1="170" x2="940" y2="170" stroke="#e1e0d9"/>
+    <rect x="20" y="70" width="88" height="100" fill="#2a78d6"/><rect x="20" y="42" width="88" height="28" fill="#eb6834"/><rect x="20" y="22" width="88" height="20" fill="#1baf7a"/>
+    <rect x="160" y="55" width="88" height="115" fill="#2a78d6"/><rect x="160" y="30" width="88" height="25" fill="#eb6834"/><rect x="160" y="12" width="88" height="18" fill="#1baf7a"/>
+    <rect x="300" y="80" width="88" height="90" fill="#2a78d6"/><rect x="300" y="52" width="88" height="28" fill="#eb6834"/><rect x="300" y="36" width="88" height="16" fill="#1baf7a"/>
+    <rect x="440" y="40" width="88" height="130" fill="#2a78d6"/><rect x="440" y="18" width="88" height="22" fill="#eb6834"/><rect x="440" y="4" width="88" height="14" fill="#1baf7a"/>
+    <rect x="580" y="62" width="88" height="108" fill="#2a78d6"/><rect x="580" y="38" width="88" height="24" fill="#eb6834"/><rect x="580" y="22" width="88" height="16" fill="#1baf7a"/>
+    <rect x="720" y="48" width="88" height="122" fill="#2a78d6"/><rect x="720" y="26" width="88" height="22" fill="#eb6834"/><rect x="720" y="10" width="88" height="16" fill="#1baf7a"/>
+    <rect x="860" y="58" width="88" height="112" fill="#2a78d6"/><rect x="860" y="32" width="88" height="26" fill="#eb6834"/><rect x="860" y="16" width="88" height="16" fill="#1baf7a"/>
+    <g font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">
+      <text x="48" y="188">9 Nov</text><text x="188" y="188">10</text><text x="328" y="188">11</text><text x="468" y="188">12</text><text x="608" y="188">13</text><text x="748" y="188">14</text><text x="888" y="188">15</text>
+    </g>
+  </g>
+  <rect x="248" y="492" width="1008" height="208" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
+  <text x="268" y="520" font-family="Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#15140f">People this week (example)</text>
+  <g font-family="Segoe UI, sans-serif" font-size="12">
+    <text x="268" y="548" fill="#6f6d67" font-weight="600">User</text>
+    <text x="460" y="548" fill="#6f6d67" font-weight="600">Source</text>
+    <text x="620" y="548" fill="#6f6d67" font-weight="600">Messages</text>
+    <text x="780" y="548" fill="#6f6d67" font-weight="600">Input</text>
+    <text x="940" y="548" fill="#6f6d67" font-weight="600">Output</text>
+    <text x="268" y="576" fill="#15140f" font-weight="600">M.Karimi</text><text x="460" y="576" fill="#52514e">flytoday</text><text x="620" y="576" fill="#15140f">312</text><text x="780" y="576" fill="#15140f">1.10M</text><text x="940" y="576" fill="#15140f">240k</text>
+    <text x="268" y="604" fill="#15140f" font-weight="600">S.Rezaei</text><text x="460" y="604" fill="#52514e">flytoday</text><text x="620" y="604" fill="#15140f">288</text><text x="780" y="604" fill="#15140f">980k</text><text x="940" y="604" fill="#15140f">210k</text>
+    <text x="268" y="632" fill="#15140f" font-weight="600">P.Sahebi</text><text x="460" y="632" fill="#52514e">hotel</text><text x="620" y="632" fill="#15140f">241</text><text x="780" y="632" fill="#15140f">860k</text><text x="940" y="632" fill="#15140f">188k</text>
+    <text x="268" y="660" fill="#15140f" font-weight="600">A.Moradi</text><text x="460" y="660" fill="#52514e">parto</text><text x="620" y="660" fill="#15140f">256</text><text x="780" y="660" fill="#15140f">740k</text><text x="940" y="660" fill="#15140f">152k</text>
+    <text x="268" y="688" fill="#15140f" font-weight="600">N.Hosseini</text><text x="460" y="688" fill="#52514e">devops</text><text x="620" y="688" fill="#15140f">187</text><text x="780" y="688" fill="#15140f">520k</text><text x="940" y="688" fill="#15140f">100k</text>
+  </g>
+</svg>

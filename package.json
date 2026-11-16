@@ -1,0 +1,18 @@
+{
+  "name": "prompt-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev:server": "npm -w server run dev",
+    "dev:web": "npm -w web run dev",
+    "build": "npm -w web run build && npm -w server run build",
+    "test": "npm -w server test"
+  },
+  "overrides": {
+    "glob": "^14.0.3"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fixture",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["-w", "server", "run", "dev:fixture"],
+      "port": 9010
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+node_modules
+dist
+pgdata
+.deploy
+agent-bin
+
+# secrets and local env
+.env
+.env.*
+!.env.example
+
+# compiled agent binaries
+*.exe
+agent-windows/agent-windows
+agent-windows/*.exe
+
+# documents that should not be in source control
+*.pdf

@@ -1,0 +1,63 @@
+name: prompt-dashboard
+
+services:
+  app:
+    build: .
+    image: prompt-dashboard:latest
+    container_name: prompt-dashboard-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PORT:-9010}:9010"
+    environment:
+      DATABASE_URL: postgres://prompt:${POSTGRES_PASSWORD}@db:5432/prompt
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      RESET_ADMIN_PASSWORD: ${RESET_ADMIN_PASSWORD:-false}
+      # Windows agent install links (docs/windows-agent.html): pd-agent.exe is served from /app/agent-bin, and
+      # each PC's agent admits connections only from this address (how PCs see the dashboard's connections)
+      AGENT_BIN_DIR: /app/agent-bin
+      # Address PCs see dashboard connections from. Set PC_AGENT_ALLOW in .env (no public default).
+      PC_AGENT_ALLOW: ${PC_AGENT_ALLOW:-127.0.0.1}
+    volumes:
+      # pd-agent.exe for install links; read-only (copy a new build here to update every new install)
+      - ./agent-bin:/app/agent-bin:ro
+      # Every folder under /sources that holds a 9router data.sqlite (up to 5 levels deep) is a source,
+      # found automatically within a minute; removed ones are kept as "removed" with their data.
+      # Read-only: the dashboard never writes to a 9router's files.
+      # Point these at your 9router trees via .env; local defaults are empty example dirs.
+      - ${SOURCES_USERS:-./sources/users}:/sources/users:ro
+      - ${SOURCES_TEAM:-./sources/example-team}:/sources/example-team:ro
+      - ${SOURCES_PANEL:-./sources/example-panel}:/sources/example-panel:ro
+    networks:
+      - default
+      - routers
+
+  db:
+    image: postgres:16-alpine
+    container_name: prompt-dashboard-db
+    restart: unless-stopped
+    # lz4: texts and the write-ahead log are compressed fast; min_wal_size keeps 32 MB of recycled WAL files
+    # instead of 80 MB (the WAL was larger than the data itself)
+    command: ["postgres", "-c", "default_toast_compression=lz4", "-c", "wal_compression=lz4", "-c", "min_wal_size=32MB", "-c", "max_wal_size=256MB"]
+    environment:
+      POSTGRES_USER: prompt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: prompt
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prompt -d prompt"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+networks:
+  # the shared network of all 9router instances (docker network create 9router-net)
+  routers:
+    name: 9router-net
+    external: true
