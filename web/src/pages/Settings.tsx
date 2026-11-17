@@ -17,6 +17,7 @@ export default function Settings() {
           <SourcesCard />
           <ServersCard />
           <PasswordCard />
+          <SuperPasswordCard />
         </div>
         <div className="flex flex-col gap-5">
           <UsersCard />
@@ -713,6 +714,73 @@ function PasswordCard() {
         <div className="sm:col-span-3 flex items-center gap-3">
           <button className="btn btn-primary" disabled={!cur || !next || m.isPending}>
             {m.isPending && <Spinner size={14} />} {t('تغییر رمز', 'Change password')}
+          </button>
+          {err && (
+            <span role="alert" className="text-bad text-[12.5px]">
+              {err}
+            </span>
+          )}
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+function SuperPasswordCard() {
+  const { t } = useI18n();
+  const toast = useToast();
+  const me = useQuery({ queryKey: ['me'], queryFn: () => get<{ authenticated: boolean; super?: boolean }>('/api/auth/me'), staleTime: Infinity });
+  const [cur, setCur] = useState('');
+  const [next, setNext] = useState('');
+  const [rep, setRep] = useState('');
+  const [show, setShow] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const m = useMutation({
+    mutationFn: () => api('POST', '/api/auth/super-password', { current: cur, next }),
+    onSuccess: () => {
+      toast('ok', t('رمز سوپر تغییر کرد', 'Super password changed'));
+      setCur('');
+      setNext('');
+      setRep('');
+      setErr(null);
+    },
+    onError: (e) => setErr(errorText(e)),
+  });
+  if (!me.data?.super) return null;
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (next.length < 8) return setErr(t('رمز جدید باید دست‌کم ۸ نویسه باشد.', 'The new password must be at least 8 characters.'));
+    if (next !== rep) return setErr(t('تکرار رمز جدید یکسان نیست.', 'The new passwords do not match.'));
+    setErr(null);
+    m.mutate();
+  };
+  const type = show ? 'text' : 'password';
+  return (
+    <Card
+      title={t('تغییر رمز سوپر', 'Change super password')}
+      icon={<KeyRound size={16} />}
+      actions={
+        <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => setShow(!show)} aria-label={show ? t('پنهان کردن رمز', 'Hide password') : t('نمایش رمز', 'Show password')}>
+          {show ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      }
+    >
+      <p className="m-0 mb-3 text-[12.5px] text-ink-3">
+        {t('همین صفحه ورود، بدون نام کاربر. این رمز حذف گفتگو و آرشیو ۵روزه را باز می‌کند.', 'Same login page, no username. This password can delete conversations and open the 5-day archive.')}
+      </p>
+      <form onSubmit={submit} className="grid gap-3 sm:grid-cols-3">
+        <Field label={t('رمز سوپر فعلی', 'Current super password')}>
+          <input className="input ltr" type={type} autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} />
+        </Field>
+        <Field label={t('رمز سوپر جدید', 'New super password')}>
+          <input className="input ltr" type={type} autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+        </Field>
+        <Field label={t('تکرار', 'Repeat')}>
+          <input className="input ltr" type={type} autoComplete="new-password" value={rep} onChange={(e) => setRep(e.target.value)} />
+        </Field>
+        <div className="sm:col-span-3 flex items-center gap-3">
+          <button className="btn btn-primary" disabled={!cur || !next || m.isPending}>
+            {m.isPending && <Spinner size={14} />} {t('تغییر رمز سوپر', 'Change super password')}
           </button>
           {err && (
             <span role="alert" className="text-bad text-[12.5px]">

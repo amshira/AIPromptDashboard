@@ -1,6 +1,7 @@
 import { Cron } from 'croner';
 import { Db, getSetting, pruneTexts, setSetting } from './db/index.js';
 import { detectPanels, purgePanels } from './ingest/panels.js';
+import { purgeDeletedConversations } from './ingest/trash.js';
 import { discoverAllRemotes, discoverSources, isRunning, syncSource } from './ingest/sync.js';
 
 export const TZ = 'Asia/Tehran';
@@ -140,6 +141,7 @@ export async function rescanSources(db: Db, sourcesDir: string): Promise<number[
   const fresh = await discoverSources(db, sourcesDir);
   await detectPanels(db, sourcesDir);
   await purgePanels(db);
+  await purgeDeletedConversations(db);
   for (const id of fresh) void syncSource(db, sourcesDir, id, 'discover').catch(() => undefined);
   return fresh;
 }

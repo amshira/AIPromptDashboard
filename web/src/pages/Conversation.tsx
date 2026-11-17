@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { Bell, Bot, BrainCircuit, Eye, EyeOff, Sparkles, ChevronDown, ChevronLeft, Copy, GitBranch, Hand, Image as ImageIcon, Check, KeyRound, Layers, MessagesSquare, RotateCcw, Slash, Terminal, Timer, TriangleAlert, User, Wrench, Zap } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Bell, Bot, BrainCircuit, Eye, EyeOff, Sparkles, ChevronDown, ChevronLeft, Copy, GitBranch, Hand, Image as ImageIcon, Check, KeyRound, Layers, MessagesSquare, RotateCcw, Slash, Terminal, Timer, Trash2, TriangleAlert, User, Wrench, Zap } from 'lucide-react';
 import { memo, ReactNode, useMemo, useState } from 'react';
 import Markdown from 'react-markdown';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import remarkGfm from 'remark-gfm';
-import { cx, Empty, ErrorBox, Skeleton, Spinner, useToast } from '../components/ui';
-import { get, MessageRow, RequestRow, ResponseBlock, SessionDetail, ThreadKind, ThreadRow } from '../lib/api';
+import { Confirm, cx, Empty, ErrorBox, Skeleton, Spinner, useToast } from '../components/ui';
+import { api, errorText, get, MessageRow, RequestRow, ResponseBlock, SessionDetail, ThreadKind, ThreadRow } from '../lib/api';
 import { bytes, compact, duration, gapText, gregDate, int, modelLabel, timeOf, uiDate } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 
@@ -119,7 +119,31 @@ function buildTimeline(d: SessionDetail): Item[] {
 function Thread({ d, toggles, set, setMany }: { d: SessionDetail; toggles: Toggles; set: (k: keyof Toggles) => (v: boolean) => void; setMany: (p: Partial<Toggles>) => void }) {
   const { t, lang } = useI18n();
   const toast = useToast();
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const me = useQuery({ queryKey: ['me'], queryFn: () => get<{ authenticated: boolean; super?: boolean }>('/api/auth/me'), staleTime: Infinity });
   const [copied, setCopied] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+  const hide = useMutation({
+    mutationFn: () => api<{ keep_days: number }>('DELETE', `/api/sessions/${d.session.id}`),
+    onSuccess: (r) => {
+      toast('ok', t(`گفتگو به آرشیو رفت؛ تا ${r.keep_days} روز قابل بازیابی است.`, `The conversation was moved to the archive. It can be restored for ${r.keep_days} days.`));
+      setDelOpen(false);
+      qc.invalidateQueries({ queryKey: ['sessions'] });
+      nav('/archive');
+    },
+    onError: (e) => toast('err', errorText(e)),
+  });
+  const restore = useMutation({
+    mutationFn: () => api('POST', `/api/sessions/${d.session.id}/restore`),
+    onSuccess: () => {
+      toast('ok', t('گفتگو بازیابی شد.', 'The conversation was restored.'));
+      qc.invalidateQueries({ queryKey: ['session'] });
+      qc.invalidateQueries({ queryKey: ['sessions'] });
+      qc.invalidateQueries({ queryKey: ['archive'] });
+    },
+    onError: (e) => toast('err', errorText(e)),
+  });
   const timeline = useMemo(() => buildTimeline(d), [d]);
 
   const totals = useMemo(() => {
@@ -223,10 +247,28 @@ function Thread({ d, toggles, set, setMany }: { d: SessionDetail; toggles: Toggl
           <h1 className="m-0 text-[19px] font-extrabold leading-snug msg-text !whitespace-normal" dir="auto">
             {d.session.title || t('(بدون عنوان)', '(Untitled)')}
           </h1>
-          <button className="btn btn-sm shrink-0" onClick={copy}>
-            {copied ? <Check size={14} /> : <Copy size={14} />} {t('کپی لینک', 'Copy link')}
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {me.data?.super && !d.session.deleted_at && (
+              <button className="btn btn-sm hover:!text-bad" onClick={() => setDelOpen(true)}>
+                <Trash2 size={14} /> {t('حذف', 'Delete')}
+              </button>
+            )}
+            {me.data?.super && d.session.deleted_at && (
+              <button className="btn btn-sm" onClick={() => restore.mutate()} disabled={restore.isPending}>
+                <RotateCcw size={14} /> {t('بازیابی', 'Restore')}
+              </button>
+            )}
+            <button className="btn btn-sm" onClick={copy}>
+              {copied ? <Check size={14} /> : <Copy size={14} />} {t('کپی لینک', 'Copy link')}
+            </button>
+          </div>
         </div>
+        {d.session.deleted_at && (
+          <div className="mt-3 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-ink-2">
+            {t('این گفتگو در آرشیو حذف‌شده است و فقط با رمز سوپر دیده می‌شود.', 'This conversation is in the deleted archive and only the super password can see it.')}
+            {d.session.purge_at && <> {t('حذف کامل', 'Permanently deleted')} {uiDate(d.session.purge_at)}.</>}
+          </div>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12.5px] text-ink-3">
           <span className="inline-flex items-center gap-1">
             <KeyRound size={13} /> {t('کلید:', 'Key:')} <b className="text-ink-2 font-medium ltr">{d.session.user_name}</b>
@@ -361,6 +403,15 @@ function Thread({ d, toggles, set, setMany }: { d: SessionDetail; toggles: Toggl
           </div>
         </section>
       )}
+      <Confirm
+        open={delOpen}
+        title={t('حذف گفتگو', 'Delete conversation')}
+        body={t('از فهرست گفتگوها پنهان می‌شود و تا ۵ روز در آرشیو سوپر می‌ماند. با رمز عادی دیده نمی‌شود.', 'It disappears from Conversations and stays in the super archive for 5 days. The admin password cannot see it.')}
+        confirmLabel={t('حذف', 'Delete')}
+        onConfirm={() => hide.mutate()}
+        onClose={() => setDelOpen(false)}
+        busy={hide.isPending}
+      />
     </>
   );
 }

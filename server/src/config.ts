@@ -10,6 +10,9 @@ export interface Config {
   webDir: string;
   adminPassword: string;
   resetAdminPassword: boolean;
+  /** second password: same login box; can hide client prompts and see the 5-day archive */
+  superPassword: string;
+  resetSuperPassword: boolean;
   sessionSecret: string;
   cookieSecure: boolean;
   /** only behind a reverse proxy: otherwise anyone can pick their own IP with X-Forwarded-For and dodge the login lockout */
@@ -29,6 +32,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     webDir: env.WEB_DIR ?? join(here, '../../web/dist'),
     adminPassword: env.ADMIN_PASSWORD ?? '',
     resetAdminPassword: /^(1|true|yes)$/i.test(env.RESET_ADMIN_PASSWORD ?? ''),
+    superPassword: env.SUPER_PASSWORD ?? '',
+    resetSuperPassword: /^(1|true|yes)$/i.test(env.RESET_SUPER_PASSWORD ?? ''),
     sessionSecret: env.SESSION_SECRET ?? '',
     cookieSecure: /^(1|true|yes)$/i.test(env.COOKIE_SECURE ?? ''),
     trustProxy: /^(1|true|yes)$/i.test(env.TRUST_PROXY ?? ''),

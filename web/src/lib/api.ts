@@ -67,6 +67,8 @@ const ERRORS: Record<string, { fa: string; en: string }> = {
   name_taken: { fa: 'سروری با این نام کوتاه قبلاً اضافه شده است.', en: 'A server with this short name already exists.' },
   not_deleted: { fa: 'این پنل هنوز حذف نشده است.', en: 'This panel is not deleted.' },
   password_unreadable: { fa: 'این رمز با کلید قبلی داشبورد ذخیره شده و دیگر خوانده نمی‌شود؛ دوباره واردش کنید.', en: 'This password was saved with an older dashboard key and can no longer be read. Enter it again.' },
+  forbidden: { fa: 'این کار فقط با رمز سوپر ممکن است.', en: 'This action needs the super password.' },
+  password_same: { fa: 'رمز سوپر و رمز عادی نباید یکی باشند.', en: 'The super password and the admin password must be different.' },
   detected_panel: { fa: 'پنل 9routerهای شناسایی‌شده حذف نمی‌شود؛ با حذف منبع از تنظیمات برداشته می‌شود.', en: 'A detected 9router panel is removed by deleting its source in Settings.' },
 };
 const msg = (pair: { fa: string; en: string }) => (getLang() === 'en' ? pair.en : pair.fa);
@@ -223,6 +225,8 @@ export interface SessionRow extends Sums {
   last_human: string | null;
   last_human_at: string | null;
   total: number;
+  deleted_at?: string | null;
+  purge_at?: string | null;
 }
 export interface MessageRow {
   id: number;
@@ -274,7 +278,20 @@ export interface ThreadRow {
   skip_seq: number;
 }
 export interface SessionDetail {
-  session: { id: number; source_id: number; source: string; user_id: number; user_name: string; title: string; first_at: string; last_at: string; external_session_id: string | null; machine_user: string };
+  session: {
+    id: number;
+    source_id: number;
+    source: string;
+    user_id: number;
+    user_name: string;
+    title: string;
+    first_at: string;
+    last_at: string;
+    external_session_id: string | null;
+    machine_user: string;
+    deleted_at?: string | null;
+    purge_at?: string | null;
+  };
   threads: ThreadRow[];
   /** messages of every thread; a branch only sends what is new in it */
   messages: MessageRow[];

@@ -8,7 +8,7 @@
   <text x="32" y="158" font-family="Segoe UI, sans-serif" font-size="13" fill="#6f6d67">Daily report</text>
   <text x="32" y="188" font-family="Segoe UI, sans-serif" font-size="13" fill="#6f6d67">Panels and access</text>
   <text x="248" y="48" font-family="Segoe UI, sans-serif" font-size="22" font-weight="800" fill="#15140f">Overview</text>
-  <text x="248" y="72" font-family="Segoe UI, sans-serif" font-size="13" fill="#6f6d67">Token use and user activity across every 9router · 915 Nov 2026</text>
+  <text x="248" y="72" font-family="Segoe UI, sans-serif" font-size="13" fill="#6f6d67">Token use and user activity across every 9router Â· 9-15 Nov 2026</text>
   <g font-family="Segoe UI, sans-serif">
     <rect x="248" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
     <text x="264" y="118" font-size="12" fill="#6f6d67">User messages</text>
@@ -21,11 +21,11 @@
     <rect x="592" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
     <text x="608" y="118" font-size="12" fill="#6f6d67">Input tokens</text>
     <text x="608" y="148" font-size="26" font-weight="800" fill="#15140f">4.2M</text>
-    <text x="608" y="170" font-size="11" fill="#6f6d67">“ prompts</text>
+    <text x="608" y="170" font-size="11" fill="#6f6d67">prompts</text>
     <rect x="764" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
     <text x="780" y="118" font-size="12" fill="#6f6d67">Output tokens</text>
     <text x="780" y="148" font-size="26" font-weight="800" fill="#15140f">890k</text>
-    <text x="780" y="170" font-size="11" fill="#6f6d67">‘ completions</text>
+    <text x="780" y="170" font-size="11" fill="#6f6d67">completions</text>
     <rect x="936" y="96" width="160" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
     <text x="952" y="118" font-size="12" fill="#6f6d67">Cache read</text>
     <text x="952" y="148" font-size="26" font-weight="800" fill="#15140f">12.1M</text>
@@ -37,7 +37,7 @@
   </g>
   <rect x="248" y="204" width="1008" height="268" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
   <text x="268" y="232" font-family="Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#15140f">Daily tokens by source</text>
-  <text x="268" y="252" font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">Stacked · flytoday · hotel · parto · devops</text>
+  <text x="268" y="252" font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">Stacked Â· flytoday Â· hotel Â· parto Â· devops</text>
   <g transform="translate(280,270)">
     <line x1="0" y1="170" x2="940" y2="170" stroke="#e1e0d9"/>
     <rect x="20" y="70" width="88" height="100" fill="#2a78d6"/><rect x="20" y="42" width="88" height="28" fill="#eb6834"/><rect x="20" y="22" width="88" height="20" fill="#1baf7a"/>

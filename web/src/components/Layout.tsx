@@ -1,8 +1,8 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { BarChart3, CalendarClock, KeySquare, LayoutDashboard, LogOut, Menu, MessagesSquare, Moon, Settings, Sun, X } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Archive, BarChart3, CalendarClock, KeySquare, LayoutDashboard, LogOut, Menu, MessagesSquare, Moon, Settings, Sun, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { api } from '../lib/api';
+import { api, get } from '../lib/api';
 import { LangSwitch, useI18n } from '../lib/i18n';
 import { cx } from './ui';
 
@@ -18,9 +18,11 @@ function useTheme() {
 export function Layout() {
   const { t } = useI18n();
   const [theme, toggle] = useTheme();
+  const me = useQuery({ queryKey: ['me'], queryFn: () => get<{ authenticated: boolean; super?: boolean }>('/api/auth/me'), staleTime: Infinity });
   const NAV = [
     { to: '/', l: t('نمای کلی', 'Overview'), icon: LayoutDashboard, end: true },
     { to: '/explore', l: t('گفتگوها', 'Conversations'), icon: MessagesSquare },
+    ...(me.data?.super ? [{ to: '/archive', l: t('آرشیو حذف‌شده', 'Deleted archive'), icon: Archive }] : []),
     { to: '/reports', l: t('گزارش روزانه', 'Daily report'), icon: BarChart3 },
     { to: '/panels', l: t('پنل‌ها و دسترسی', 'Panels and access'), icon: KeySquare },
     { to: '/schedules', l: t('زمان‌بندی', 'Schedules'), icon: CalendarClock },

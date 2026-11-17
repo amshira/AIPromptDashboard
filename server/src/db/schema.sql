@@ -160,6 +160,8 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE INDEX IF NOT EXISTS conversations_user_idx ON conversations(user_id, last_at DESC);
 CREATE INDEX IF NOT EXISTS conversations_last_idx ON conversations(last_at);
 CREATE INDEX IF NOT EXISTS conversations_ext_idx ON conversations(source_id, external_session_id);
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS conversations_deleted_idx ON conversations(deleted_at) WHERE deleted_at IS NOT NULL;
 
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS conversation_id INT REFERENCES conversations(id) ON DELETE CASCADE;
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS thread_kind TEXT NOT NULL DEFAULT 'main';   -- main | continuation | branch | subagent

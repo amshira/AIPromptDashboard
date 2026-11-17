@@ -91,6 +91,7 @@ Object.assign(process.env, {
   DATABASE_URL: `postgres://postgres:postgres@127.0.0.1:${PG_PORT}/postgres`,
   SOURCES_DIR: src.root,
   ADMIN_PASSWORD: 'dev-password-1',
+  SUPER_PASSWORD: 'dev-super-2',
   SESSION_SECRET: 'dev-secret-dev-secret-dev-secret-0123',
   PORT: process.env.PORT ?? '9010',
   PG_POOL_MAX: '1', // pglite serves one connection at a time

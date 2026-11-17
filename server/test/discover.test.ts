@@ -45,10 +45,10 @@ describe('source discovery', () => {
     expect(await discoverSources(t.pool, src.root)).toHaveLength(2);
     const rows = await local();
     expect(rows.map((r) => [r.name, r.path])).toEqual([
-      ['devops', 'devops'],
       ['acme/example-user', 'users/acmeusers/example-user/data/db'],
+      ['devops', 'devops'],
     ]);
-    const out = await syncSource(t.pool, src.root, rows[1].id, 'test');
+    const out = await syncSource(t.pool, src.root, rows.find((r) => r.name === 'acme/example-user')!.id, 'test');
     expect(out.error).toBeUndefined();
     expect(out.rowsNew).toBe(1);
     // a second scan adds nothing

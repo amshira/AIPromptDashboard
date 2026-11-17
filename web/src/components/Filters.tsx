@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { get, Meta } from '../lib/api';
+import { DateField } from './DateField';
 import { addDays, gregDate, modelLabel, todayYmd, uiYmd } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { Segmented } from './ui';
@@ -59,20 +60,20 @@ export function useFilters(defaultDays = 7) {
 }
 
 export function DateRange({ f }: { f: ReturnType<typeof useFilters> }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const presets = ['1', '7', '30', '90', 'custom'].map((v) => ({ v, l: presetLabel(v, t) }));
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Segmented label={t('بازه', 'Range')} value={f.preset} onChange={f.setPreset} options={presets} />
       {f.preset === 'custom' && (
         <div className="flex items-center gap-2 text-[12.5px] text-ink-3">
-          <input type="date" aria-label={t('از', 'From')} className="input !w-[150px] num" value={f.from} max={f.to} onChange={(e) => e.target.value && f.set({ from: e.target.value })} />
+          <DateField label={t('از', 'From')} value={f.from} max={f.to} onChange={(from) => f.set({ from })} />
           <span>{t('تا', 'to')}</span>
-          <input type="date" aria-label={t('تا', 'To')} className="input !w-[150px] num" value={f.to} min={f.from} onChange={(e) => e.target.value && f.set({ to: e.target.value })} />
+          <DateField label={t('تا', 'To')} value={f.to} min={f.from} onChange={(to) => f.set({ to })} />
         </div>
       )}
       <span className="text-[12px] text-ink-3 hidden md:inline">
-        {uiYmd(f.from)} {t('تا', 'to')} {uiYmd(f.to)} {lang === 'fa' && <span className="num opacity-70">({f.from} → {f.to})</span>}
+        {uiYmd(f.from)} {t('تا', 'to')} {uiYmd(f.to)}
       </span>
     </div>
   );

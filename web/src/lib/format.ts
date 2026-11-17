@@ -116,3 +116,72 @@ export function addDays(ymd: string, n: number): string {
   t.setUTCDate(t.getUTCDate() + n);
   return t.toISOString().slice(0, 10);
 }
+
+const MONTHS_FA = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+export type CalParts = { y: number; m: number; d: number };
+
+function calFmt(persian: boolean) {
+  return new Intl.DateTimeFormat(persian ? 'en-u-ca-persian-nu-latn' : 'en-CA', { timeZone: TZ, year: 'numeric', month: 'numeric', day: 'numeric' });
+}
+
+/** Year/month/day in the calendar the UI language uses (Jalali in FA, Gregorian in EN). */
+export function uiParts(v: string | Date, lang = getLang()): CalParts {
+  const f = calFmt(lang !== 'en');
+  const o: Partial<Record<Intl.DateTimeFormatPartTypes, string>> = {};
+  for (const p of f.formatToParts(d(v instanceof Date ? v : v.includes('T') ? v : v + 'T12:00:00Z'))) {
+    if (p.type !== 'literal') o[p.type] = p.value;
+  }
+  return { y: Number(o.year), m: Number(o.month), d: Number(o.day) };
+}
+
+export function uiMonthTitle(y: number, m: number, lang = getLang()) {
+  return `${(lang === 'en' ? MONTHS_EN : MONTHS_FA)[m - 1]} ${y}`;
+}
+
+const WEEKDAYS_EN_SUN = [
+  { v: 0, l: 'Sun' },
+  { v: 1, l: 'Mon' },
+  { v: 2, l: 'Tue' },
+  { v: 3, l: 'Wed' },
+  { v: 4, l: 'Thu' },
+  { v: 5, l: 'Fri' },
+  { v: 6, l: 'Sat' },
+];
+
+export function weekdayHeaders(lang = getLang()) {
+  return lang === 'en' ? WEEKDAYS_EN_SUN : WEEKDAYS_FA;
+}
+
+/** Gregorian `YYYY-MM-DD` (Tehran day) for a Jalali or Gregorian Y/M/D. */
+export function ymdFromUiParts(y: number, m: number, day: number, lang = getLang()): string {
+  const persian = lang !== 'en';
+  let t = Date.parse(`${(persian ? y + 621 : y).toString().padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(Math.min(day, 28)).padStart(2, '0')}T12:00:00Z`);
+  for (let i = 0; i < 10; i++) {
+    const p = uiParts(new Date(t), lang);
+    const delta = (y - p.y) * 400 + (m - p.m) * 32 + (day - p.d);
+    if (delta === 0) return gregDate(new Date(t));
+    t += delta * 86_400_000;
+  }
+  return gregDate(new Date(t));
+}
+
+export function daysInUiMonth(y: number, m: number, lang = getLang()) {
+  const next = m === 12 ? ymdFromUiParts(y + 1, 1, 1, lang) : ymdFromUiParts(y, m + 1, 1, lang);
+  return uiParts(addDays(next, -1), lang).d;
+}
+
+export function shiftUiMonth(y: number, m: number, delta: number) {
+  let mm = m + delta;
+  let yy = y;
+  while (mm < 1) {
+    mm += 12;
+    yy -= 1;
+  }
+  while (mm > 12) {
+    mm -= 12;
+    yy += 1;
+  }
+  return { y: yy, m: mm };
+}

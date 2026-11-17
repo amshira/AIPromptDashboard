@@ -65,7 +65,7 @@ interface DayDatum {
 
 /** Stacked daily bars. `rows` are already folded to the plan's keys. */
 export function StackedDaily({ data, plan, unit, label }: { data: DayDatum[]; plan: SeriesPlan; unit: string; label?: (k: string) => string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const name = (k: string) => (k === OTHER ? t('سایر', 'Other') : label ? label(k) : k);
   const ticks = useMemo(() => {
     const step = Math.ceil(data.length / 8);
@@ -87,7 +87,8 @@ export function StackedDaily({ data, plan, unit, label }: { data: DayDatum[]; pl
               return (
                 <div className="card px-3 py-2 text-[12.5px] min-w-[190px]">
                   <div className="font-semibold mb-1">
-                    {uiYmd(String(day))} <span className="text-ink-3 font-normal text-[11px] num">{String(day)}</span>
+                    {uiYmd(String(day))}
+                    {lang === 'fa' ? <span className="text-ink-3 font-normal text-[11px] num"> {String(day)}</span> : null}
                   </div>
                   {rows.map((p) => (
                     <div key={String(p.dataKey)} className="flex items-center gap-2 py-[1px]">

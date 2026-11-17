@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
+import { requireSuper } from '../auth.js';
 import { Db } from '../db/index.js';
 import { isRunning, syncSource } from '../ingest/sync.js';
+import { CONVO_KEEP_DAYS, purgeDeletedConversations } from '../ingest/trash.js';
 import { rescanSources } from '../scheduler.js';
 import { AUX_KINDS, DAY_SQL, USER_NAME_SQL, Where, intOrNull, shamsi, todayTehran, ymdOr } from './util.js';
 
@@ -117,7 +119,7 @@ export function registerDataApi(app: FastifyInstance, db: Db, sourcesDir: string
   });
 
   // A "session" in the UI is a conversation: every thread of one chat (main, after compaction, rewinds, subagents).
-  app.get('/api/sessions', async (req) => {
+  app.get('/api/sessions', async (req, reply) => {
     const q = req.query as Q;
     const { w } = requestFilter({ ...q, user: undefined, client: undefined }, 30);
     const outer = new Where();
@@ -131,6 +133,10 @@ export function registerDataApi(app: FastifyInstance, db: Db, sourcesDir: string
       outer.add(`(EXISTS (SELECT 1 FROM sessions t JOIN messages m ON m.session_id = t.id WHERE t.conversation_id = c.id AND m.search LIKE ?)`, like);
       outer.parts[outer.parts.length - 1] += ` OR lower(c.title) LIKE $${outer.params.push(like)})`;
     }
+    const archived = q.archived === '1' || q.archived === 'true';
+    if (archived && !requireSuper(req, reply)) return;
+    if (archived) outer.raw('c.deleted_at IS NOT NULL');
+    else outer.raw('c.deleted_at IS NULL');
     const limit = Math.min(200, intOrNull(q.limit) ?? 50);
     const offset = Math.max(0, intOrNull(q.offset) ?? 0);
     // outer params continue after the request-filter params
@@ -139,6 +145,7 @@ export function registerDataApi(app: FastifyInstance, db: Db, sourcesDir: string
     const params = [...w.params, ...outer.params];
     const [sql, sqlParams] = withAux(
       `SELECT c.id, c.source_id, src.label AS source, c.user_id, ${USER_NAME_SQL('u')} AS user_name, c.title, c.first_at, c.last_at, c.machine_user,
+              c.deleted_at, (c.deleted_at + interval '${CONVO_KEEP_DAYS} days') AS purge_at,
               a.requests, a.aux_requests, a.human_messages, a.input_tokens, a.output_tokens, a.cache_read, a.cache_write, a.aux_tokens, a.models,
               count(*) OVER()::int AS total
        FROM conversations c
@@ -185,7 +192,7 @@ export function registerDataApi(app: FastifyInstance, db: Db, sourcesDir: string
         });
       }
     }
-    return { total: r.rows[0]?.total ?? 0, sessions: r.rows };
+    return { total: r.rows[0]?.total ?? 0, sessions: r.rows, keep_days: CONVO_KEEP_DAYS };
   });
 
   app.get('/api/sessions/:id', async (req, reply) => {
@@ -193,11 +200,12 @@ export function registerDataApi(app: FastifyInstance, db: Db, sourcesDir: string
     if (!id) return reply.code(400).send({ error: 'bad_id' });
     const s = await db.query(
       `SELECT c.id, c.source_id, src.label AS source, c.user_id, ${USER_NAME_SQL('u')} AS user_name, c.title, c.first_at, c.last_at,
-              c.external_session_id, c.machine_user
+              c.external_session_id, c.machine_user, c.deleted_at, (c.deleted_at + interval '${CONVO_KEEP_DAYS} days') AS purge_at
        FROM conversations c JOIN sources src ON src.id=c.source_id JOIN users u ON u.id=c.user_id WHERE c.id=$1`,
       [id],
     );
     if (!s.rows[0]) return reply.code(404).send({ error: 'not_found' });
+    if (s.rows[0].deleted_at && req.role !== 'super') return reply.code(404).send({ error: 'not_found' });
     const [threads, msgs, reqs, aux] = await Promise.all([
       db.query(`SELECT id, thread_kind AS kind, title, first_at, last_at, skip_seq FROM sessions WHERE conversation_id=$1 ORDER BY first_at, id`, [id]),
       // a branch repeats its parent up to skip_seq: only what is new in it is sent
@@ -228,9 +236,40 @@ export function registerDataApi(app: FastifyInstance, db: Db, sourcesDir: string
     return { session: s.rows[0], threads: threads.rows, messages: msgs.rows, requests: reqs.rows, aux: aux.rows };
   });
 
+  app.delete('/api/sessions/:id', async (req, reply) => {
+    if (!requireSuper(req, reply)) return;
+    const id = intOrNull((req.params as { id: string }).id);
+    if (!id) return reply.code(400).send({ error: 'bad_id' });
+    const now = (req.query as Q).now === '1' || (req.query as Q).now === 'true';
+    if (now) {
+      const n = await purgeDeletedConversations(db, id);
+      if (!n) return reply.code(404).send({ error: 'not_found' });
+      return { purged: true };
+    }
+    const r = await db.query(`UPDATE conversations SET deleted_at = COALESCE(deleted_at, now()) WHERE id=$1 RETURNING id, deleted_at, (deleted_at + interval '${CONVO_KEEP_DAYS} days') AS purge_at`, [id]);
+    if (!r.rows[0]) return reply.code(404).send({ error: 'not_found' });
+    return { ok: true, keep_days: CONVO_KEEP_DAYS, ...r.rows[0] };
+  });
+
+  app.post('/api/sessions/:id/restore', async (req, reply) => {
+    if (!requireSuper(req, reply)) return;
+    const id = intOrNull((req.params as { id: string }).id);
+    if (!id) return reply.code(400).send({ error: 'bad_id' });
+    const r = await db.query('UPDATE conversations SET deleted_at = NULL WHERE id=$1 AND deleted_at IS NOT NULL RETURNING id', [id]);
+    if (!r.rows[0]) return reply.code(404).send({ error: 'not_found' });
+    return { ok: true };
+  });
+
   app.get('/api/messages/:id', async (req, reply) => {
     const id = intOrNull((req.params as { id: string }).id);
-    const r = id ? await db.query('SELECT m.id, x.body AS text FROM messages m JOIN texts x ON x.hash = m.content_hash WHERE m.id=$1', [id]) : { rows: [] };
+    const r = id
+      ? await db.query(
+          `SELECT m.id, x.body AS text FROM messages m JOIN texts x ON x.hash = m.content_hash
+           JOIN sessions t ON t.id = m.session_id JOIN conversations c ON c.id = t.conversation_id
+           WHERE m.id=$1 AND (c.deleted_at IS NULL OR $2)`,
+          [id, req.role === 'super'],
+        )
+      : { rows: [] };
     if (!r.rows[0]) return reply.code(404).send({ error: 'not_found' });
     return r.rows[0];
   });

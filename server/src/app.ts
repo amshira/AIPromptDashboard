@@ -7,7 +7,7 @@ import { registerDataApi } from './api/data.js';
 import { registerInstallApi } from './api/install.js';
 import { registerPanelsApi } from './api/panels.js';
 import { registerServersApi } from './api/servers.js';
-import { ensureAdmin, ensureSecret, registerAuth } from './auth.js';
+import { ensureAdmin, ensureSecret, ensureSuper, registerAuth } from './auth.js';
 import { Config } from './config.js';
 import { Db } from './db/index.js';
 
@@ -34,6 +34,7 @@ export async function buildApp(db: Db, cfg: Config, opts: { logger?: boolean } =
   await app.register(fastifyCookie);
 
   await ensureAdmin(db, cfg, app.log);
+  await ensureSuper(db, cfg, app.log);
   const secret = await ensureSecret(db, cfg);
   registerAuth(app, db, cfg, secret);
 

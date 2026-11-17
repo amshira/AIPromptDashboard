@@ -2,11 +2,17 @@
 
 **داشبورد پرامپت** — a web app for seeing what people actually sent to Claude (and to Cursor / Codex on Windows): the prompt, the tools, the answer, and the tokens.
 
-FA / EN UI, Jalali + Gregorian dates (Tehran time), one admin login.
+FA / EN UI. Dates follow the language: **Jalali (جلالی)** in Persian, **Gregorian (میلادی)** in English. Tehran time. One admin login.
 
-| Overview | A conversation | Panels and access |
-| --- | --- | --- |
-| [![Overview](docs/screenshots/overview.svg)](docs/screenshots/overview.svg) | [![Conversation](docs/screenshots/conversation.svg)](docs/screenshots/conversation.svg) | [![Panels](docs/screenshots/panels.svg)](docs/screenshots/panels.svg) |
+<p align="center">
+  <img src="docs/screenshots/overview.png" alt="Overview" width="860" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/conversation.png" alt="A conversation" width="860" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/panels.png" alt="Panels and access" width="860" />
+</p>
 
 The pictures above use **sample data** (the same shape as `npm -w server run dev:fixture`). They are not a live environment.
 

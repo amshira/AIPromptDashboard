@@ -22,7 +22,7 @@ const call = (method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, 
 
 beforeAll(async () => {
   t = await startTestDb(54330);
-  const cfg = { ...loadConfig({}), adminPassword: 'correct-horse', sourcesDir: src.root, webDir: '/nonexistent' };
+  const cfg = { ...loadConfig({}), adminPassword: 'correct-horse', superPassword: 'super-horse-99', sourcesDir: src.root, webDir: '/nonexistent' };
   app = await buildApp(t.pool, cfg, { logger: false });
   const db = src.open('flytoday');
   const h1 = [u('سلام')];
@@ -52,7 +52,7 @@ describe('auth', () => {
     expect(c.httpOnly).toBe(true);
     expect(c.sameSite).toBe('Strict');
     cookie = `pd_session=${c.value}`;
-    expect((await call('GET', '/api/auth/me')).json()).toEqual({ authenticated: true });
+    expect((await call('GET', '/api/auth/me')).json()).toEqual({ authenticated: true, super: false });
   });
   it('rejects a tampered cookie', async () => {
     const r = await app.inject({ method: 'GET', url: '/api/overview', headers: { cookie: 'pd_session=9999999999999.AAAA' } });
@@ -84,6 +84,24 @@ describe('auth', () => {
     expect((await app.inject({ method: 'GET', url: '/api/overview', headers: { cookie: old } })).statusCode).toBe(401);
     cookie = `pd_session=${r.cookies.find((x) => x.name === 'pd_session')!.value}`;
     expect((await call('GET', '/api/overview')).statusCode).toBe(200);
+  });
+  it('lets only the super password hide a conversation in the 5-day archive', async () => {
+    const list = (await call('GET', '/api/sessions?from=2000-01-01&to=2100-01-01')).json();
+    const id = list.sessions[0].id as number;
+    expect((await call('DELETE', `/api/sessions/${id}`)).statusCode).toBe(403);
+    const sup = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { password: 'super-horse-99' } });
+    expect(sup.statusCode).toBe(200);
+    expect(sup.json()).toMatchObject({ ok: true, super: true });
+    const sc = `pd_session=${sup.cookies.find((x) => x.name === 'pd_session')!.value}`;
+    const del = await app.inject({ method: 'DELETE', url: `/api/sessions/${id}`, headers: { cookie: sc } });
+    expect(del.statusCode).toBe(200);
+    expect(del.json().keep_days).toBe(5);
+    expect((await call('GET', `/api/sessions/${id}`)).statusCode).toBe(404);
+    expect((await call('GET', '/api/sessions?archived=1&from=2000-01-01&to=2100-01-01')).statusCode).toBe(403);
+    const arch = await app.inject({ method: 'GET', url: '/api/sessions?archived=1&from=2000-01-01&to=2100-01-01', headers: { cookie: sc } });
+    expect(arch.json().sessions.some((s: { id: number }) => s.id === id)).toBe(true);
+    await app.inject({ method: 'POST', url: `/api/sessions/${id}/restore`, headers: { cookie: sc } });
+    expect((await call('GET', `/api/sessions/${id}`)).statusCode).toBe(200);
   });
 });
 

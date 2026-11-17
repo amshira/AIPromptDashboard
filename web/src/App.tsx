@@ -13,6 +13,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Schedules = lazy(() => import('./pages/Schedules'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Panels = lazy(() => import('./pages/Panels'));
+const Archive = lazy(() => import('./pages/Archive'));
 
 function FullSpinner() {
   return (
@@ -26,11 +27,11 @@ export function App() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const loc = useLocation();
-  const me = useQuery({ queryKey: ['me'], queryFn: () => get<{ authenticated: boolean }>('/api/auth/me'), staleTime: Infinity, retry: false });
+  const me = useQuery({ queryKey: ['me'], queryFn: () => get<{ authenticated: boolean; super?: boolean }>('/api/auth/me'), staleTime: Infinity, retry: false });
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      qc.setQueryData(['me'], { authenticated: false });
+      qc.setQueryData(['me'], { authenticated: false, super: false });
     });
   }, [qc]);
 
@@ -50,6 +51,7 @@ export function App() {
         >
           <Route index element={<Lazy el={<Overview />} />} />
           <Route path="explore" element={<Lazy el={<Explorer />} />} />
+          <Route path="archive" element={me.data?.super ? <Lazy el={<Archive />} /> : <Navigate to="/" replace />} />
           <Route path="sessions/:id" element={<Lazy el={<Conversation />} />} />
           <Route path="reports" element={<Lazy el={<Reports />} />} />
           <Route path="schedules" element={<Lazy el={<Schedules />} />} />

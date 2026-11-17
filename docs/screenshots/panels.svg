@@ -25,7 +25,7 @@
     <text x="978" y="214" font-size="11" fill="#6f6d67">412k tokens</text>
   </g>
   <rect x="32" y="242" width="280" height="34" rx="8" fill="#fcfcfb" stroke="#e1e0d9"/>
-  <text x="48" y="264" font-family="Segoe UI, sans-serif" font-size="12" fill="#6f6d67">Name, domain, container&</text>
+  <text x="48" y="264" font-family="Segoe UI, sans-serif" font-size="12" fill="#6f6d67">Name, domain, computer</text>
   <rect x="324" y="242" width="108" height="34" rx="17" fill="#eceafd" stroke="#cfcaf8"/>
   <text x="340" y="264" font-family="Segoe UI, sans-serif" font-size="12" font-weight="600" fill="#4f46e5">All groups 4</text>
   <rect x="440" y="242" width="92" height="34" rx="17" fill="#fcfcfb" stroke="#e1e0d9"/>

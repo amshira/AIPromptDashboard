@@ -24,9 +24,9 @@ export function Login() {
     setBusy(true);
     setErr(null);
     try {
-      await api('POST', '/api/auth/login', { password: pw });
+      const r = await api<{ ok: boolean; super?: boolean }>('POST', '/api/auth/login', { password: pw });
       qc.clear();
-      qc.setQueryData(['me'], { authenticated: true });
+      qc.setQueryData(['me'], { authenticated: true, super: !!r.super });
       const next = sp.get('next');
       nav(next && next.startsWith('/') && !next.startsWith('//') ? next : '/', { replace: true });
     } catch (x) {
