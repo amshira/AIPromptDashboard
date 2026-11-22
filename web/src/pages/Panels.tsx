@@ -89,7 +89,7 @@ export default function Panels() {
   const toast = useToast();
   const q = useQuery({ queryKey: ['panels'], queryFn: () => get<{ panels: PanelInfo[]; keep_days: number }>('/api/panels'), refetchInterval: 60_000 });
   const status = useQuery({ queryKey: ['panels-status'], queryFn: () => get<PanelStatus>('/api/panels/status'), refetchInterval: 60_000 });
-  const pcs = useQuery({ queryKey: ['pcs'], queryFn: () => get<{ pcs: PcInfo[]; agent: { version: string; min: string } | null }>('/api/pcs'), refetchInterval: 60_000 });
+  const pcs = useQuery({ queryKey: ['pcs'], queryFn: () => get<{ pcs: PcInfo[]; agent: { version: string; min: string; minStop?: string } | null }>('/api/pcs'), refetchInterval: 60_000 });
   const servers = useQuery({ queryKey: ['servers'], queryFn: () => get<{ servers: ServerInfo[] }>('/api/servers'), refetchInterval: 60_000 });
   const [sp, setSp] = useSearchParams();
   const patchSp = (next: Record<string, string | null>) => {
@@ -116,6 +116,8 @@ export default function Panels() {
   const [purging, setPurging] = useState<PanelInfo | null>(null);
   const [delPc, setDelPc] = useState<PcInfo | null>(null);
   const [updatingPc, setUpdatingPc] = useState<number | null>(null);
+  const [stopPc, setStopPc] = useState<PcInfo | null>(null);
+  const [stoppingPc, setStoppingPc] = useState<number | null>(null);
   const [binOpen, setBinOpen] = useState(false);
 
   const refresh = () => {
@@ -180,6 +182,19 @@ export default function Panels() {
       const pc = (pcs.data?.pcs ?? []).find((p) => p.id === id);
       const name = pc?.info?.agent?.host || pc?.label;
       toast('ok', r.already ? t(`${name ?? 'این کامپیوتر'} همین حالا نسخه ${r.version} است.`, `${name ?? 'This computer'} is already on version ${r.version}.`) : t(`نسخه ${r.version} به ${name ?? 'کامپیوتر'} فرستاده شد.`, `Version ${r.version} was sent to ${name ?? 'the computer'}.`));
+      qc.invalidateQueries({ queryKey: ['pcs'] });
+    },
+    onError: (e) => toast('err', errorText(e)),
+  });
+  const stopPcMut = useMutation({
+    mutationFn: (id: number) => api<{ ok: boolean }>('POST', `/api/pcs/${id}/stop-agent`),
+    onMutate: (id) => setStoppingPc(id),
+    onSettled: () => setStoppingPc(null),
+    onSuccess: (_r, id) => {
+      const pc = (pcs.data?.pcs ?? []).find((p) => p.id === id);
+      const name = pc?.info?.agent?.host || pc?.label;
+      setStopPc(null);
+      toast('ok', t(`سرویس PD Agent روی «${name ?? ''}» متوقف می‌شود. در Services باید Stopped باشد.`, `PD Agent on “${name ?? ''}” is stopping. In Services it should show Stopped.`));
       qc.invalidateQueries({ queryKey: ['pcs'] });
     },
     onError: (e) => toast('err', errorText(e)),
@@ -327,6 +342,8 @@ export default function Panels() {
               onDeletePanel={setRemoving}
               onDeletePc={setDelPc}
               onUpdatePc={(id) => updatePc.mutate(id)}
+              stoppingId={stoppingPc}
+              onStopPc={(pc) => setStopPc(pc)}
             />
           )}
 
@@ -406,6 +423,18 @@ export default function Panels() {
         onConfirm={() => delPc && removePc.mutate(delPc.id)}
         onClose={() => setDelPc(null)}
         busy={removePc.isPending}
+      />
+      <Confirm
+        open={!!stopPc}
+        title={t('توقف سرویس agent', 'Stop the agent service')}
+        body={t(
+          `سرویس PD Agent روی «${stopPc?.info?.agent?.host || stopPc?.label || ''}» Stop می‌شود تا Cursor بتواند فایل‌هایش را آزاد کند. در Services ویندوز باید Stopped بماند. برای روشن کردن دوباره، Services را با Run as administrator باز کنید و Start بزنید.`,
+          `PD Agent on “${stopPc?.info?.agent?.host || stopPc?.label || ''}” will Stop so Cursor can release its files. In Windows Services it should stay Stopped. To start it again, open Services as administrator and click Start.`,
+        )}
+        confirmLabel={t('توقف سرویس', 'Stop service')}
+        onConfirm={() => stopPc && stopPcMut.mutate(stopPc.id)}
+        onClose={() => setStopPc(null)}
+        busy={stopPcMut.isPending}
       />
     </>
   );
@@ -677,16 +706,20 @@ function AccessTable({
   onDeletePanel,
   onDeletePc,
   onUpdatePc,
+  stoppingId,
+  onStopPc,
 }: {
   items: AccessItem[];
   checks: PanelStatus['status'];
   checking: boolean;
-  latest: { version: string; min: string } | null;
+  latest: { version: string; min: string; minStop?: string } | null;
   updatingId: number | null;
   onEdit: (p: PanelInfo) => void;
   onDeletePanel: (p: PanelInfo) => void;
   onDeletePc: (p: PcInfo) => void;
   onUpdatePc: (id: number) => void;
+  stoppingId: number | null;
+  onStopPc: (p: PcInfo) => void;
 }) {
   const { t } = useI18n();
   const toast = useToast();
@@ -808,7 +841,14 @@ function AccessTable({
                     {p ? (
                       <SecretCell p={p} onEdit={() => onEdit(p)} />
                     ) : pc ? (
-                      <AgentUpdate pc={pc} latest={latest} busy={updatingId === pc.id} onUpdate={() => onUpdatePc(pc.id)} />
+                      <AgentUpdate
+                        pc={pc}
+                        latest={latest}
+                        busy={updatingId === pc.id}
+                        onUpdate={() => onUpdatePc(pc.id)}
+                        onStop={() => onStopPc(pc)}
+                        stopping={stoppingId === pc.id}
+                      />
                     ) : row.server?.last_error ? (
                       <span className="text-[11.5px] text-bad">{agentErrorText(row.server.last_error)}</span>
                     ) : (

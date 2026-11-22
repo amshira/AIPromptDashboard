@@ -53,9 +53,14 @@ func (handler) Execute(_ []string, req <-chan svc.ChangeRequest, st chan<- svc.S
 			case svc.Interrogate:
 				st <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
-				st <- svc.Status{State: svc.StopPending}
+				st <- svc.Status{State: svc.StopPending, WaitHint: 8000}
 				cancel()
-				<-done
+				select {
+				case <-done:
+				case <-time.After(8 * time.Second):
+					// serve did not return; leave cleanly so recovery does not bounce a Stop
+					os.Exit(0)
+				}
 				return false, 0
 			}
 		case err := <-done:
@@ -181,6 +186,7 @@ func install(dir string, allow []string, port int, quiet bool) error {
 		{Type: mgr.ServiceRestart, Delay: 30 * time.Second},
 		{Type: mgr.ServiceRestart, Delay: time.Minute},
 	}, 86400)
+	_ = s.SetRecoveryActionsOnNonCrashFailures(true)
 	if err := s.Start(); err != nil {
 		return fmt.Errorf("start the service: %w", err)
 	}

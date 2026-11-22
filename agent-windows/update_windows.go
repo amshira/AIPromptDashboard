@@ -46,6 +46,29 @@ func scheduleSwap(exe, pkg string) error {
 	return run("schtasks", "/run", "/tn", updateTaskName)
 }
 
+// scheduleStop registers a one-shot SYSTEM task that runs `sc stop` after the HTTP reply has flushed.
+// sc stop is a clean SCM stop: recovery actions do not start the service again.
+func scheduleStop() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	script := filepath.Join(filepath.Dir(exe), stopScript)
+	body := "@echo off\r\n" +
+		"ping -n 3 127.0.0.1 >nul\r\n" +
+		"sc stop " + serviceName + " >nul 2>&1\r\n" +
+		"schtasks /delete /tn " + stopTaskName + " /f >nul 2>&1\r\n" +
+		"del /q \"%~f0\" >nul 2>&1\r\n"
+	if err := os.WriteFile(script, []byte(body), 0o644); err != nil {
+		return err
+	}
+	if err := run("schtasks", "/create", "/tn", stopTaskName, "/tr", `"`+script+`"`,
+		"/sc", "once", "/st", "00:00", "/ru", "SYSTEM", "/rl", "HIGHEST", "/f"); err != nil {
+		return err
+	}
+	return run("schtasks", "/run", "/tn", stopTaskName)
+}
+
 // cleanupUpdateArtifacts clears the staged file, the batch script and any leftover task after a restart.
 func cleanupUpdateArtifacts() {
 	exe, err := os.Executable()
@@ -54,5 +77,7 @@ func cleanupUpdateArtifacts() {
 	}
 	_ = os.Remove(exe + updatePkgSuffix)
 	_ = os.Remove(filepath.Join(filepath.Dir(exe), updateScript))
+	_ = os.Remove(filepath.Join(filepath.Dir(exe), stopScript))
 	_ = run("schtasks", "/delete", "/tn", updateTaskName, "/f")
+	_ = run("schtasks", "/delete", "/tn", stopTaskName, "/f")
 }

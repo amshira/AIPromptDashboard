@@ -146,6 +146,8 @@ type server struct {
 	busy   chan struct{}
 	// how a received exe is put in place; applyUpdate by default (Windows task-based swap), replaced in tests
 	stage func([]byte) error
+	// how a remote stop is carried out; scheduleStop by default (sc stop via a Scheduled Task), replaced in tests
+	halt func() error
 }
 
 func newServer(cfg *Config, logger *log.Logger) *server {
@@ -157,6 +159,7 @@ func newServer(cfg *Config, logger *log.Logger) *server {
 		log:    logger,
 		busy:   make(chan struct{}, 2),
 		stage:  applyUpdate,
+		halt:   scheduleStop,
 	}
 }
 
@@ -169,10 +172,10 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		notFound()
 		return
 	}
-	// everything is a signed GET; the one exception is the update push, a signed POST carrying the new exe
+	// everything is a signed GET; POSTs are the update push and a remote stop
 	endpoint := strings.TrimPrefix(r.URL.Path, base)
 	wantMethod := http.MethodGet
-	if endpoint == "update" {
+	if endpoint == "update" || endpoint == "stop" {
 		wantMethod = http.MethodPost
 	}
 	if r.Method != wantMethod {
@@ -191,9 +194,20 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
+	// sqlite can sit in a read after the HTTP deadline; if that happens, leave so Windows
+	// restarts the service. the update POST is excluded: it is large and already restarts itself.
+	if endpoint != "update" && endpoint != "stop" {
+		finished := make(chan struct{})
+		defer close(finished)
+		go watchHung(s.log, finished)
+	}
 	q := r.URL.Query()
 	if endpoint == "update" {
 		s.handleUpdate(w, r, q.Get("h"))
+		return
+	}
+	if endpoint == "stop" {
+		s.handleStop(w)
 		return
 	}
 	var body any
@@ -284,12 +298,27 @@ func (s *server) handleUpdate(w http.ResponseWriter, r *http.Request, wantSHA st
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "restarting": true, "version": version})
 }
 
+// handleStop asks Windows to stop the PD Agent service (Scheduled Task + sc stop), then answers so the
+// dashboard can hang up before the listener goes down. Recovery does not bounce a clean sc stop.
+func (s *server) handleStop(w http.ResponseWriter) {
+	if err := s.halt(); err != nil {
+		s.log.Printf("stop failed: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	s.log.Printf("stop scheduled; Windows will set the service to Stopped")
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "stopping": true, "version": version})
+}
+
 // the staged exe (a data file, never named *.exe so it is not treated as runnable) and the one-shot
 // Scheduled Task that performs the swap
 const (
 	updatePkgSuffix = ".pkg"
 	updateTaskName  = "PDAgentUpdate"
 	updateScript    = "pd-update.cmd"
+	stopTaskName    = "PDAgentStop"
+	stopScript      = "pd-stop.cmd"
 )
 
 // applyUpdateAt writes the new bytes next to the running exe and asks the platform to swap them in. The agent
@@ -347,6 +376,23 @@ func serve(ctx context.Context, cfg *Config, dir string, logger *log.Logger) err
 		return err
 	}
 	return nil
+}
+
+// a normal dashboard pull finishes in well under this; past it the handler is stuck (usually Cursor sqlite).
+var hungLimit = 3 * time.Minute
+
+// swapped in tests; os.Exit in production so the service recovery policy can start a fresh process.
+var exitNow = os.Exit
+
+func watchHung(log *log.Logger, done <-chan struct{}) {
+	t := time.NewTimer(hungLimit)
+	defer t.Stop()
+	select {
+	case <-done:
+	case <-t.C:
+		log.Printf("a dashboard read ran too long; exiting so Windows restarts the service")
+		exitNow(1)
+	}
 }
 
 type discard struct{}

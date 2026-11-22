@@ -8,4 +8,6 @@ import "errors"
 
 func applyUpdate([]byte) error { return errors.New("self-update works on Windows only") }
 
+func scheduleStop() error { return errors.New("remote stop works on Windows only") }
+
 func cleanupUpdateArtifacts() {}

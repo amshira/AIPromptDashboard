@@ -125,6 +125,20 @@ async function pinnedFetch<T>(conn: AgentConn, path: string, params: Record<stri
   const sig = createHmac('sha256', Buffer.from(conn.token, 'hex')).update(`${method}\n${u.pathname}\n${query}\n${t}\n${n}`).digest('hex');
 
   return new Promise<T>((resolve, reject) => {
+    // createConnection reuses an already-open TLS socket, so request() timeout is not always armed;
+    // an overall deadline is what stops a hung Cursor sqlite read from freezing ingest.
+    let settled = false;
+    let deadline: ReturnType<typeof setTimeout>;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      fn();
+    };
+    deadline = setTimeout(() => {
+      socket.destroy();
+      finish(() => reject(new AgentError(`cannot reach ${where}: timed out`)));
+    }, TIMEOUT_MS);
     const req = request(
       {
         createConnection: () => socket,
@@ -143,8 +157,10 @@ async function pinnedFetch<T>(conn: AgentConn, path: string, params: Record<stri
       (res) => {
         if (res.statusCode !== 200) {
           res.resume();
-          return reject(
-            new AgentError(res.statusCode === 404 ? 'agent answered 404 (wrong pairing code, clock difference or unknown source)' : `agent answered ${res.statusCode}`),
+          return finish(() =>
+            reject(
+              new AgentError(res.statusCode === 404 ? 'agent answered 404 (wrong pairing code, clock difference or unknown source)' : `agent answered ${res.statusCode}`),
+            ),
           );
         }
         const chunks: Buffer[] = [];
@@ -153,22 +169,27 @@ async function pinnedFetch<T>(conn: AgentConn, path: string, params: Record<stri
           size += c.length;
           if (size > MAX_BODY) {
             req.destroy();
-            return reject(new AgentError('agent answer too large'));
+            return finish(() => reject(new AgentError('agent answer too large')));
           }
           chunks.push(c);
         });
         res.on('end', () => {
-          try {
-            resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')) as T);
-          } catch {
-            reject(new AgentError('agent answer is not JSON'));
-          }
+          finish(() => {
+            try {
+              resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')) as T);
+            } catch {
+              reject(new AgentError('agent answer is not JSON'));
+            }
+          });
         });
-        res.on('error', (e) => reject(new AgentError(`${where}: ${e.message}`)));
+        res.on('error', (e) => finish(() => reject(new AgentError(`${where}: ${e.message}`))));
       },
     );
-    req.on('timeout', () => req.destroy(new Error('timed out')));
-    req.on('error', (e) => reject(e instanceof AgentError ? e : new AgentError(`cannot reach ${where}: ${e.message}`)));
+    req.on('timeout', () => {
+      socket.destroy();
+      finish(() => reject(new AgentError(`cannot reach ${where}: timed out`)));
+    });
+    req.on('error', (e) => finish(() => reject(e instanceof AgentError ? e : new AgentError(`cannot reach ${where}: ${e.message}`))));
     if (body) req.write(body);
     req.end();
   });

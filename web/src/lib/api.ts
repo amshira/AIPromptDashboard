@@ -58,6 +58,7 @@ const ERRORS: Record<string, { fa: string; en: string }> = {
   not_found: { fa: 'مورد پیدا نشد.', en: 'Not found.' },
   no_agent_exe: { fa: 'فایل pd-agent.exe روی سرور داشبورد نیست (پوشه‌ی agent-bin).', en: 'pd-agent.exe is not on the dashboard server (agent-bin folder).' },
   agent_too_old: { fa: 'این agent قدیمی‌تر از نسخه‌ای است که از سرور به‌روز می‌شود. یک بار دستور نصب را روی همان کامپیوتر دوباره اجرا کنید.', en: 'This agent is older than the version that can be updated from the server. Run the install command once on that computer.' },
+  agent_cannot_stop: { fa: 'این نسخه agent هنوز ایستادن از داشبورد را بلد نیست. اول «به‌روزرسانی agent» را بزنید، بعد ایستادن.', en: 'This agent version cannot be stopped from the dashboard. Update the agent first, then stop it.' },
   agent_version_unknown: { fa: 'نسخه agent هنوز خوانده نشده. اول «بررسی دوباره» را بزنید.', en: 'The agent version has not been read yet. Click Check again first.' },
   not_a_windows_agent: { fa: 'این مورد یک agent ویندوزی نیست.', en: 'This is not a Windows agent.' },
   no_pc_allow: { fa: 'PC_AGENT_ALLOW در تنظیمات سرور داشبورد خالی است.', en: 'PC_AGENT_ALLOW is empty in the dashboard server settings.' },
@@ -92,6 +93,10 @@ export function agentErrorText(raw: string): string {
   if (raw.startsWith('agent answered 404 (wrong pairing'))
     return en ? 'The agent rejected the request: the pairing code is wrong, or this server and that computer disagree by more than two minutes.' : 'agent درخواست را نپذیرفت: کد اتصال درست نیست یا ساعت این سرور و آن کامپیوتر بیش از دو دقیقه اختلاف دارد.';
   if (raw === 'bad_pairing') return en ? 'The pairing code is not valid.' : 'کد اتصال معتبر نیست.';
+  if (raw === 'stopped from the dashboard')
+    return en
+      ? 'The agent was stopped from the dashboard. In Windows Services it should show Stopped.'
+      : 'agent از داشبورد متوقف شد. در Services ویندوز باید Stopped باشد.';
   return en ? `Could not connect: ${raw}` : `اتصال به سرور برقرار نشد: ${raw}`;
 }
 

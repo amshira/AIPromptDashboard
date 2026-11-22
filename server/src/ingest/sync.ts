@@ -6,6 +6,8 @@ import { IngestCtx, ingestRow } from './ingest.js';
 import { KeyIndex } from './keys.js';
 
 const OVERLAP_MS = 15 * 60 * 1000;
+/** One source must not pin the scheduler: Cursor's sqlite (or a silent TLS socket) can sit without error. */
+const SYNC_MS = 90_000;
 
 export interface SyncOutcome {
   rowsRead: number;
@@ -143,8 +145,21 @@ export async function syncSource(db: pg.Pool, dir: string, sourceId: number, tri
   const out: SyncOutcome = { rowsRead: 0, rowsNew: 0, gap: false };
   const run = await db.query('INSERT INTO sync_runs(source_id, schedule_id, trigger) VALUES($1,$2,$3) RETURNING id', [sourceId, scheduleId, trigger]);
   const runId = run.rows[0].id as number;
-  let reader: RowReader | null = null;
+  let reader: RowReader | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      try {
+        reader?.close();
+      } catch {
+        /* the next tick must proceed even if this reader ignores close */
+      }
+      reject(new Error('sync timed out'));
+    }, SYNC_MS);
+  });
   try {
+    await Promise.race([
+      (async () => {
     const src = (
       await db.query(
         `SELECT s.name, s.path, s.last_cursor_ts, s.remote_name, v.url, v.token, v.cert_sha256 AS cert, v.enabled AS server_enabled
@@ -205,10 +220,14 @@ export async function syncSource(db: pg.Pool, dir: string, sourceId: number, tri
       out.error ?? null,
       out.gap,
     ]);
+      })(),
+      timedOut,
+    ]);
   } catch (e) {
     out.error = (e as Error).message;
     await db.query('UPDATE sources SET last_error=$2, last_sync_at=now() WHERE id=$1', [sourceId, out.error]);
   } finally {
+    if (timer) clearTimeout(timer);
     reader?.close();
     running.delete(sourceId);
     await db.query('UPDATE sync_runs SET finished_at=now(), rows_read=$2, rows_new=$3, gap=$4, error=$5 WHERE id=$1', [

@@ -1,5 +1,5 @@
 import { useMutation, UseQueryResult, useQueryClient } from '@tanstack/react-query';
-import { Download, Laptop, Mail, MessagesSquare, Plus, Trash2, UserRound } from 'lucide-react';
+import { Download, Laptop, Mail, MessagesSquare, Plus, Square, Trash2, UserRound } from 'lucide-react';
 import { ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Confirm, cx, Empty, ErrorBox, Skeleton, Spinner, useToast } from '../components/ui';
@@ -22,7 +22,7 @@ const ONLINE_MS = 20 * 60_000;
 
 export const isOnline = (pc: PcInfo) => !!pc.enabled && !pc.last_error && !!pc.last_seen_at && Date.now() - Date.parse(pc.last_seen_at) < ONLINE_MS;
 
-type Pcs = { pcs: PcInfo[]; agent: { version: string; min: string } | null };
+type Pcs = { pcs: PcInfo[]; agent: { version: string; min: string; minStop?: string } | null };
 
 const cmpVersion = (a: string, b: string) => {
   const pa = a.split('.').map(Number);
@@ -49,6 +49,17 @@ export function PcSection({ q, onAdd }: { q: UseQueryResult<Pcs>; onAdd: () => v
     onError: (e) => toast('err', errorText(e)),
   });
   const [del, setDel] = useState<PcInfo | null>(null);
+  const [stopPc, setStopPc] = useState<PcInfo | null>(null);
+  const stop = useMutation({
+    mutationFn: (id: number) => api<{ ok: boolean }>('POST', `/api/pcs/${id}/stop-agent`),
+    onSuccess: () => {
+      const name = stopPc?.info?.agent?.host || stopPc?.label;
+      setStopPc(null);
+      toast('ok', t(`سرویس PD Agent روی «${name ?? ''}» متوقف می‌شود. در Services باید Stopped باشد.`, `PD Agent on “${name ?? ''}” is stopping. In Services it should show Stopped.`));
+      qc.invalidateQueries({ queryKey: ['pcs'] });
+    },
+    onError: (e) => toast('err', errorText(e)),
+  });
   const remove = useMutation({
     mutationFn: (id: number) => api('DELETE', `/api/servers/${id}`),
     onSuccess: () => {
@@ -117,11 +128,25 @@ export function PcSection({ q, onAdd }: { q: UseQueryResult<Pcs>; onAdd: () => v
               latest={q.data?.agent ?? null}
               busy={update.isPending && update.variables === pc.id}
               onUpdate={() => update.mutate(pc.id)}
+              onStop={() => setStopPc(pc)}
+              stopping={stop.isPending && stop.variables === pc.id}
               onDelete={() => setDel(pc)}
             />
           ))}
         </div>
       )}
+      <Confirm
+        open={!!stopPc}
+        title={t('توقف سرویس agent', 'Stop the agent service')}
+        body={t(
+          `سرویس PD Agent روی «${stopPc?.info?.agent?.host || stopPc?.label || ''}» Stop می‌شود تا Cursor بتواند فایل‌هایش را آزاد کند. در Services ویندوز باید Stopped بماند. برای روشن کردن دوباره، Services را با Run as administrator باز کنید و Start بزنید.`,
+          `PD Agent on “${stopPc?.info?.agent?.host || stopPc?.label || ''}” will Stop so Cursor can release its files. In Windows Services it should stay Stopped. To start it again, open Services as administrator and click Start.`,
+        )}
+        confirmLabel={t('توقف سرویس', 'Stop service')}
+        onConfirm={() => stopPc && stop.mutate(stopPc.id)}
+        onClose={() => setStopPc(null)}
+        busy={stop.isPending}
+      />
       <Confirm
         open={!!del}
         title={t('حذف کامپیوتر', 'Remove computer')}
@@ -148,7 +173,23 @@ function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; h
   );
 }
 
-function PcCard({ pc, latest, busy, onUpdate, onDelete }: { pc: PcInfo; latest: { version: string; min: string } | null; busy: boolean; onUpdate: () => void; onDelete: () => void }) {
+function PcCard({
+  pc,
+  latest,
+  busy,
+  onUpdate,
+  onStop,
+  stopping,
+  onDelete,
+}: {
+  pc: PcInfo;
+  latest: { version: string; min: string; minStop?: string } | null;
+  busy: boolean;
+  onUpdate: () => void;
+  onStop: () => void;
+  stopping: boolean;
+  onDelete: () => void;
+}) {
   const { t } = useI18n();
   const { host, port } = addressOf(pc.url);
   const online = isOnline(pc);
@@ -222,30 +263,75 @@ function PcCard({ pc, latest, busy, onUpdate, onDelete }: { pc: PcInfo; latest: 
           })}
         </ul>
       )}
-      <AgentUpdate pc={pc} latest={latest} busy={busy} onUpdate={onUpdate} />
+      <AgentUpdate pc={pc} latest={latest} busy={busy} onUpdate={onUpdate} onStop={onStop} stopping={stopping} />
     </article>
   );
 }
 
-export function AgentUpdate({ pc, latest, busy, onUpdate }: { pc: PcInfo; latest: { version: string; min: string } | null; busy: boolean; onUpdate: () => void }) {
+export function AgentUpdate({
+  pc,
+  latest,
+  busy,
+  onUpdate,
+  onStop,
+  stopping,
+}: {
+  pc: PcInfo;
+  latest: { version: string; min: string; minStop?: string } | null;
+  busy: boolean;
+  onUpdate: () => void;
+  onStop?: () => void;
+  stopping?: boolean;
+}) {
   const { t } = useI18n();
-  if (!latest) return null;
   const running = pc.info?.agent?.version;
+  const minStop = latest?.minStop ?? '1.7.4';
+  const canStop = !!onStop && !!running && cmpVersion(running, minStop) >= 0 && pc.enabled && !stopping && !busy;
+  const stopBtn = onStop && (
+    <button
+      className="btn btn-sm self-start"
+      onClick={onStop}
+      disabled={!canStop}
+      title={
+        !running
+          ? t('نسخه agent هنوز خوانده نشده.', 'The agent version has not been read yet.')
+          : cmpVersion(running, minStop) < 0
+            ? t('اول agent را به‌روز کنید، بعد می‌توانید از داشبورد متوقفش کنید.', 'Update the agent first, then you can stop it from the dashboard.')
+            : t('سرویس PD Agent را روی این کامپیوتر Stop می‌کند', 'Stops the PD Agent service on this computer')
+      }
+    >
+      {stopping ? <Spinner size={13} /> : <Square size={13} />}
+      {t(' توقف سرویس', ' Stop service')}
+    </button>
+  );
+  if (!latest) return stopBtn ? <div className="flex flex-wrap gap-1.5">{stopBtn}</div> : null;
   if (!running) return <p className="m-0 text-[12px] text-ink-3 leading-5">{t('نسخه agent هنوز خوانده نشده. «بررسی دوباره» را بزنید.', 'The agent version has not been read yet. Click “Check again”.')}</p>;
   if (cmpVersion(running, latest.min) < 0) {
     return (
       <div className="flex flex-col gap-1.5">
-        <button className="btn btn-sm self-start" disabled>
-          <Download size={13} />{t(' به‌روزرسانی agent', ' Update agent')}
-        </button>
+        <div className="flex flex-wrap gap-1.5">
+          <button className="btn btn-sm self-start" disabled>
+            <Download size={13} />{t(' به‌روزرسانی agent', ' Update agent')}
+          </button>
+          {stopBtn}
+        </div>
         <p className="m-0 text-[11.5px] text-ink-3 leading-5">{t(`نسخه ${running} این کار را بلد نیست. یک بار دستور نصب را روی همین کامپیوتر دوباره اجرا کنید تا به ${latest.min} برسد؛ بعد از آن همین دکمه فایل جدید را می‌فرستد و سرویس را دوباره اجرا می‌کند.`, `Version ${running} cannot be updated from this button. Run the install command once on this computer to reach ${latest.min}; after that, this button sends the new file and restarts the service.`)}</p>
       </div>
     );
   }
-  if (cmpVersion(latest.version, running) <= 0) return <p className="m-0 text-[12px] text-good">{t(`agent به‌روز است (${running})`, `agent is up to date (${running})`)}</p>;
+  if (cmpVersion(latest.version, running) <= 0)
+    return (
+      <div className="flex flex-col gap-1.5">
+        <p className="m-0 text-[12px] text-good">{t(`agent به‌روز است (${running})`, `agent is up to date (${running})`)}</p>
+        {stopBtn}
+      </div>
+    );
   return (
-    <button className="btn btn-primary btn-sm self-start" onClick={onUpdate} disabled={busy || !pc.enabled}>
-      {busy ? <Spinner size={13} /> : <Download size={13} />}{t(` به‌روزرسانی به ${latest.version}`, ` Update to ${latest.version}`)}
-    </button>
+    <div className="flex flex-wrap gap-1.5">
+      <button className="btn btn-primary btn-sm self-start" onClick={onUpdate} disabled={busy || !pc.enabled || stopping}>
+        {busy ? <Spinner size={13} /> : <Download size={13} />}{t(` به‌روزرسانی به ${latest.version}`, ` Update to ${latest.version}`)}
+      </button>
+      {stopBtn}
+    </div>
   );
 }

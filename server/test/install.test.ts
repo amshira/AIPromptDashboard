@@ -124,7 +124,8 @@ describe('install links', () => {
     const unknown = await insert('pc-unknown', null);
     try {
       const list = await call('GET', '/api/pcs');
-      expect(list.json().agent).toEqual({ version: '1.6.0', min: '1.6.0' });
+      expect(list.json().agent).toEqual({ version: '1.6.0', min: '1.6.0', minStop: '1.7.4' });
+      expect((await call('POST', `/api/pcs/${current.rows[0].id}/stop-agent`)).json().error).toBe('agent_cannot_stop');
       expect((await call('POST', `/api/pcs/${old.rows[0].id}/update-agent`)).json().error).toBe('agent_too_old');
       expect((await call('POST', `/api/pcs/${unknown.rows[0].id}/update-agent`)).json().error).toBe('agent_version_unknown');
       expect((await call('POST', `/api/pcs/${current.rows[0].id}/update-agent`)).json()).toMatchObject({ ok: true, already: true, version: '1.6.0' });

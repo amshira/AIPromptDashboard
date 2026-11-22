@@ -55,6 +55,8 @@ type cursorStore struct {
 type dbIndex struct {
 	Stamp   fileStamp            `json:"stamp"`
 	Chats   map[string]chatIndex `json:"chats"`
+	Email   string               `json:"email,omitempty"`
+	Plan    string               `json:"plan,omitempty"`
 	built   bool                 // whether this process has reconciled the index at least once
 	recheck time.Time            // when a chat still answering may have settled; zero when none is
 	rows    []rowMeta            // every chat's rows, sorted by (Timestamp, ID)
@@ -184,12 +186,7 @@ type agentInfo struct {
 }
 
 // cursorAccount reads only these two keys of Cursor's settings; the login tokens next to them are never read.
-func cursorAccount(file string) (email, plan string) {
-	db, err := openReadOnly(file)
-	if err != nil {
-		return "", ""
-	}
-	defer db.Close()
+func cursorAccount(db *sql.DB) (email, plan string) {
 	q, err := db.Query(`SELECT key, CAST(value AS TEXT) FROM ItemTable WHERE key IN ('cursorAuth/cachedEmail', 'cursorAuth/stripeMembershipType')`)
 	if err != nil {
 		return "", ""
@@ -219,8 +216,7 @@ func (s *cursorStore) sources() (map[string]any, error) {
 	out := []sourceInfo{}
 	for _, p := range s.profiles() {
 		info := sourceInfo{Name: p.name, Profile: p.user, Kind: "cursor", Account: p.account}
-		info.Email, info.Plan = cursorAccount(p.db)
-		// Cursor writes to the -wal file first; its time is the real last use while Cursor is open
+		// last use is the file clock only — Stat does not keep a handle
 		var last time.Time
 		for _, f := range []string{p.db, p.db + "-wal"} {
 			if st, err := os.Stat(f); err == nil && st.ModTime().After(last) {
@@ -230,9 +226,24 @@ func (s *cursorStore) sources() (map[string]any, error) {
 		if !last.IsZero() {
 			info.LastUse = iso(last)
 		}
-		if ix, err := s.index(p); err != nil {
-			info.Error = err.Error()
-		} else {
+		ix := s.idx[p.db]
+		if ix == nil {
+			ix = s.loadIndex(p.db)
+			s.idx[p.db] = ix
+		}
+		// first answer may build the index; later "are you up?" checks must not reopen
+		// Cursor's 200 MB database. Cursor writes the -wal file continuously while it
+		// is running, so treating that as "changed" used to open sqlite every minute
+		// and the updater then saw the files as in use.
+		if !ix.built {
+			var err error
+			ix, err = s.index(p)
+			if err != nil {
+				info.Error = err.Error()
+			}
+		}
+		if ix != nil {
+			info.Email, info.Plan = ix.Email, ix.Plan
 			for _, ch := range ix.Chats {
 				if len(ch.Rows) > 0 {
 					info.Chats++
@@ -317,6 +328,7 @@ func (s *cursorStore) index(p profile) (*dbIndex, error) {
 		return nil, err
 	}
 	defer db.Close()
+	ix.Email, ix.Plan = cursorAccount(db)
 	q, err := db.Query(`SELECT substr(key, 14),
 		CASE WHEN json_valid(CAST(value AS TEXT)) THEN json_extract(CAST(value AS TEXT), '$.lastUpdatedAt') END,
 		length(value)
@@ -456,6 +468,7 @@ func (s *cursorStore) loadIndex(db string) *dbIndex {
 		return fresh
 	}
 	ix := &on.dbIndex
+	ix.built = true // disk index is enough for "are you up?"; do not reopen Cursor on start
 	for _, ch := range ix.Chats {
 		ix.rows = append(ix.rows, ch.Rows...)
 	}
@@ -487,8 +500,9 @@ func (s *cursorStore) saveIndex(db string, ix *dbIndex) {
 }
 
 func openReadOnly(file string) (*sql.DB, error) {
-	// mode=ro + query_only: the agent can never change Cursor's database
-	dsn := "file:" + filepath.ToSlash(file) + "?mode=ro&_pragma=busy_timeout(5000)&_pragma=query_only(true)"
+	// mode=ro + query_only: never write. nolock: do not take SQLite's Windows share lock, so Cursor can
+	// quit or self-update while we read. A torn page is skipped when the JSON fails to parse.
+	dsn := "file:" + filepath.ToSlash(file) + "?mode=ro&nolock=1&_pragma=busy_timeout(5000)&_pragma=query_only(true)"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err

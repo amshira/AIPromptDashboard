@@ -19,7 +19,7 @@ import (
 
 // versionTag is one contiguous literal so the dashboard can read the running agent's version straight out of
 // the exe bytes (to decide whether to push an update). Bump the number here, nowhere else.
-const versionTag = "PDAGENT_VERSION=1.7.0"
+const versionTag = "PDAGENT_VERSION=1.7.4"
 
 var version = strings.TrimPrefix(versionTag, "PDAGENT_VERSION=")
 

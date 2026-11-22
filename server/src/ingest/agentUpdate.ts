@@ -8,6 +8,8 @@ const EXE = 'pd-agent.exe';
 // the first agent build that applies a pushed update the Kaspersky-safe way (Scheduled-Task swap, no self-exec);
 // older agents must be reinstalled once by hand before they can be updated from the server
 export const MIN_SELF_UPDATE = '1.6.0';
+/** first agent that accepts a signed POST /stop (Scheduled Task + sc stop, service stays Stopped) */
+export const MIN_REMOTE_STOP = '1.7.4';
 
 export interface AgentExe {
   file: string;

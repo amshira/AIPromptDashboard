@@ -93,6 +93,14 @@ export async function runSchedule(db: Db, sourcesDir: string, s: Schedule, trigg
   await Promise.all(ids.map((r) => syncSource(db, sourcesDir, r.id, trigger, s.id)));
 }
 
+function timeout(ms: number, label: string): { promise: Promise<never>; cancel: () => void } {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  const promise = new Promise<never>((_, reject) => {
+    t = setTimeout(() => reject(new Error(label)), ms);
+  });
+  return { promise, cancel: () => t && clearTimeout(t) };
+}
+
 export async function tick(db: Db, sourcesDir: string, now = new Date()): Promise<number> {
   const rows = (await db.query('SELECT * FROM schedules WHERE enabled')).rows as Schedule[];
   const due = rows.filter((s) => isDue(s, now));
@@ -147,33 +155,68 @@ export async function rescanSources(db: Db, sourcesDir: string): Promise<number[
 }
 
 /** Starts the 20-second scheduler tick (with a 9router rescan every minute) and the nightly (03:00 Tehran) retention job. */
-export function startScheduler(db: Db, sourcesDir: string, log: { error: (e: unknown, m: string) => void }) {
+export function startScheduler(
+  db: Db,
+  sourcesDir: string,
+  log: { error: (e: unknown, m: string) => void },
+  exit: (code: number) => void = (code) => process.exit(code),
+) {
   let busy = false;
   let lastScan = 0;
+  let stuckTicks = 0;
+  // PC last_seen must not wait on a hung 9router/Cursor sync: one stuck sqlite read used to freeze
+  // this loop for hours, so the panel drew the Windows agent as Down while the service was still up.
+  const beat = setInterval(() => {
+    void discoverAllRemotes(db).catch((e) => log.error(e, 'pc heartbeat failed'));
+  }, 60_000);
+  beat.unref();
   const timer = setInterval(async () => {
     if (busy) return;
     busy = true;
     try {
       const now = new Date();
-      if (now.getTime() - lastScan >= 60_000) {
-        lastScan = now.getTime();
-        await rescanSources(db, sourcesDir);
-      }
-      await tick(db, sourcesDir, now);
-      const { hour, ymd } = tehranParts(now);
-      const last = await getSetting<{ ymd?: string }>(db, 'retention_ymd', {});
-      if (hour === 3 && last.ymd !== ymd) {
-        await setSetting(db, 'retention_ymd', { ymd });
-        await runRetention(db, now);
+      const work = (async () => {
+        if (now.getTime() - lastScan >= 60_000) {
+          lastScan = now.getTime();
+          await rescanSources(db, sourcesDir);
+        }
+        await tick(db, sourcesDir, now);
+        const { hour, ymd } = tehranParts(now);
+        const last = await getSetting<{ ymd?: string }>(db, 'retention_ymd', {});
+        if (hour === 3 && last.ymd !== ymd) {
+          await setSetting(db, 'retention_ymd', { ymd });
+          await runRetention(db, now);
+        }
+      })();
+      const limit = timeout(180_000, 'scheduler tick timed out');
+      try {
+        await Promise.race([work, limit.promise]);
+        stuckTicks = 0;
+      } finally {
+        limit.cancel();
       }
     } catch (e) {
       log.error(e, 'scheduler tick failed');
+      // two consecutive hung ticks (~6 min) → Docker's unless-stopped brings the process back.
+      // a single slow 9router must not bounce the UI.
+      if (e instanceof Error && e.message === 'scheduler tick timed out') {
+        stuckTicks += 1;
+        if (stuckTicks >= 2) {
+          log.error(e, 'scheduler stuck; exiting so the container restarts');
+          exit(1);
+        }
+      } else {
+        stuckTicks = 0;
+      }
     } finally {
       busy = false;
     }
   }, 20_000);
   timer.unref();
-  return () => clearInterval(timer);
+  return () => {
+    clearInterval(timer);
+    clearInterval(beat);
+  };
 }
 
 export { isRunning };

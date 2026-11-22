@@ -74,6 +74,42 @@ func state(ids ...[]byte) string {
 
 func ms(t time.Time) float64 { return float64(t.UnixMilli()) }
 
+func TestSourcesDoesNotReopenCursorWhileWalGrows(t *testing.T) {
+	users := t.TempDir()
+	c := newProfile(t, users, "A.Nazari")
+	id := c.blob(map[string]any{"role": "user", "content": []any{map[string]any{"type": "text", "text": "<user_query>hi</user_query>"}}})
+	c.put("composerData:chat-1", map[string]any{
+		"composerId": "chat-1", "lastUpdatedAt": ms(time.Now()), "conversationState": state(id),
+	})
+	st := newCursorStore(users, 90*time.Second)
+	if _, err := st.sources(); err != nil {
+		t.Fatal(err)
+	}
+	st.mu.Lock()
+	parses := 0
+	for _, ix := range st.idx {
+		parses = ix.parses
+	}
+	st.mu.Unlock()
+	if parses == 0 {
+		t.Fatal("first sources() should build the index")
+	}
+	wal := filepath.Join(users, "A.Nazari", cursorDB+"-wal")
+	if err := os.WriteFile(wal, []byte("grown"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.sources(); err != nil {
+		t.Fatal(err)
+	}
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	for _, ix := range st.idx {
+		if ix.parses != parses {
+			t.Fatalf("heartbeat reopened Cursor's database: parses %d -> %d", parses, ix.parses)
+		}
+	}
+}
+
 func TestCursorChatsBecomeTurns(t *testing.T) {
 	users := t.TempDir()
 	c := newProfile(t, users, "P.Sahebi")
@@ -398,6 +434,51 @@ func TestUpdatePushAppliesAndRestarts(t *testing.T) {
 	s.ServeHTTP(w, signed(base, "h="+h, time.Now(), "aa33aa33aa33aa33aa"))
 	if w.Code != 404 {
 		t.Fatalf("GET on update: %d", w.Code)
+	}
+}
+
+func TestStopPushSchedulesHalt(t *testing.T) {
+	cfg := &Config{Port: 40000, Prefix: "abcdefghijklmnopqrstuvwx", Secret: testSecret, Allow: []string{"127.0.0.1"}, ProfilesDir: t.TempDir()}
+	s := newServer(cfg, log.New(io.Discard, "", 0))
+	called := false
+	s.halt = func() error { called = true; return nil }
+	base := "/abcdefghijklmnopqrstuvwx/v1/stop"
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, signedBody(base, "", nil, time.Now(), "ff44ff44ff44ff44ff"))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"stopping":true`) || !called {
+		t.Fatalf("stop: %d %s called=%v", w.Code, w.Body.String(), called)
+	}
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, signed(base, "", time.Now(), "aa55aa55aa55aa55aa"))
+	if w.Code != 404 {
+		t.Fatalf("GET on stop: %d", w.Code)
+	}
+}
+
+func TestWatchHungExitsWhenAReadStalls(t *testing.T) {
+	oldLimit, oldExit := hungLimit, exitNow
+	defer func() { hungLimit, exitNow = oldLimit, oldExit }()
+	hungLimit = 20 * time.Millisecond
+	code := -1
+	exitNow = func(c int) { code = c }
+	watchHung(log.New(io.Discard, "", 0), make(chan struct{}))
+	if code != 1 {
+		t.Fatalf("stuck read should exit 1, got %d", code)
+	}
+}
+
+func TestWatchHungStopsWhenTheReadFinishes(t *testing.T) {
+	oldLimit, oldExit := hungLimit, exitNow
+	defer func() { hungLimit, exitNow = oldLimit, oldExit }()
+	hungLimit = time.Second
+	code := -1
+	exitNow = func(c int) { code = c }
+	done := make(chan struct{})
+	go watchHung(log.New(io.Discard, "", 0), done)
+	close(done)
+	time.Sleep(30 * time.Millisecond)
+	if code != -1 {
+		t.Fatalf("a finished read must not restart the service, got %d", code)
 	}
 }
 

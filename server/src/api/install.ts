@@ -4,9 +4,9 @@ import { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { Config } from '../config.js';
 import { Db } from '../db/index.js';
-import { agentFetch, AgentConn } from '../ingest/reader.js';
+import { agentFetch, agentPost, AgentConn } from '../ingest/reader.js';
 import { discoverRemote, syncSource } from '../ingest/sync.js';
-import { cmpVersion, maybeUpdateAgent, MIN_SELF_UPDATE, readAgentExe } from '../ingest/agentUpdate.js';
+import { cmpVersion, maybeUpdateAgent, MIN_REMOTE_STOP, MIN_SELF_UPDATE, readAgentExe } from '../ingest/agentUpdate.js';
 import { AGENT_LISTEN_PORT, packAgentZip } from './agent-pack.js';
 import { intOrNull } from './util.js';
 
@@ -172,6 +172,26 @@ export function registerInstallApi(app: FastifyInstance, db: Db, cfg: Pick<Confi
     try {
       await maybeUpdateAgent(db, srv, cfg.agentBinDir, running, true);
       return { ok: true, version: exe.version };
+    } catch (e) {
+      return reply.code(502).send({ error: (e as Error).message });
+    }
+  });
+
+  // Ask the Windows agent to stop its service (sc stop via a Scheduled Task). It stays Stopped until
+  // someone starts it from Services or the install command. Older agents do not have this endpoint.
+  app.post('/api/pcs/:id/stop-agent', async (req, reply) => {
+    const id = intOrNull((req.params as { id: string }).id);
+    if (!id) return reply.code(400).send({ error: 'bad_id' });
+    const srv = (await db.query('SELECT id, url, token, cert_sha256 AS cert, info FROM servers WHERE id=$1', [id])).rows[0];
+    if (!srv) return reply.code(404).send({ error: 'not_found' });
+    if (!srv.cert) return reply.code(409).send({ error: 'not_a_windows_agent' });
+    const running = (srv.info as { agent?: { version?: string } } | null)?.agent?.version;
+    if (!running) return reply.code(409).send({ error: 'agent_version_unknown' });
+    if (cmpVersion(running, MIN_REMOTE_STOP) < 0) return reply.code(409).send({ error: 'agent_cannot_stop' });
+    try {
+      await agentPost<{ ok: boolean }>({ url: srv.url, token: srv.token, cert: srv.cert }, 'stop', Buffer.alloc(0));
+      await db.query(`UPDATE servers SET last_error='stopped from the dashboard' WHERE id=$1`, [id]);
+      return { ok: true, stopping: true };
     } catch (e) {
       return reply.code(502).send({ error: (e as Error).message });
     }

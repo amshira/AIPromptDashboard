@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { Db } from '../db/index.js';
 import { AgentConn, agentFetch, normCert } from '../ingest/reader.js';
-import { MIN_SELF_UPDATE, readAgentExe } from '../ingest/agentUpdate.js';
+import { MIN_REMOTE_STOP, MIN_SELF_UPDATE, readAgentExe } from '../ingest/agentUpdate.js';
 import { discoverRemote, syncSource } from '../ingest/sync.js';
 import { intOrNull } from './util.js';
 
@@ -74,7 +74,7 @@ export function registerServersApi(app: FastifyInstance, db: Db, sourcesDir: str
        FROM servers v WHERE v.cert_sha256 IS NOT NULL ORDER BY v.label, v.id`,
     );
     const exe = agentBinDir ? readAgentExe(agentBinDir) : null;
-    return { pcs: r.rows, agent: exe?.version ? { version: exe.version, min: MIN_SELF_UPDATE } : null };
+    return { pcs: r.rows, agent: exe?.version ? { version: exe.version, min: MIN_SELF_UPDATE, minStop: MIN_REMOTE_STOP } : null };
   });
 
   // Ask every paired PC again now (who is on it, new profiles) instead of waiting for the schedule.
