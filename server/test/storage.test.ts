@@ -35,7 +35,7 @@ beforeAll(async () => {
   const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { password: 'storage-test-pass' } });
   cookie = `pd_session=${login.cookies.find((c) => c.name === 'pd_session')!.value}`;
 
-  const db = src.open('flytoday');
+  const db = src.open('acme');
   // a one-letter prompt
   src.insert(db, { id: 'tiny', timestamp: T(0), data: req([u(`${REMINDER}\nk`)], { prompt_tokens: 3, completion_tokens: 1 }, {}, { session: 'tiny-chat' }) });
   // a huge prompt in another chat, with the same reminder

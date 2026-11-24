@@ -156,12 +156,31 @@ async function pinnedFetch<T>(conn: AgentConn, path: string, params: Record<stri
       },
       (res) => {
         if (res.statusCode !== 200) {
-          res.resume();
-          return finish(() =>
-            reject(
-              new AgentError(res.statusCode === 404 ? 'agent answered 404 (wrong pairing code, clock difference or unknown source)' : `agent answered ${res.statusCode}`),
-            ),
-          );
+          const bits: Buffer[] = [];
+          res.on('data', (c: Buffer) => {
+            if (Buffer.concat(bits).length < 4000) bits.push(c);
+          });
+          res.on('end', () => {
+            const raw = Buffer.concat(bits).toString('utf8');
+            let detail = '';
+            try {
+              const j = JSON.parse(raw) as { error?: string };
+              if (j.error) detail = `: ${j.error}`;
+            } catch {
+              if (raw.trim()) detail = `: ${raw.trim().slice(0, 300)}`;
+            }
+            finish(() =>
+              reject(
+                new AgentError(
+                  res.statusCode === 404
+                    ? 'agent answered 404 (wrong pairing code, clock difference or unknown source)'
+                    : `agent answered ${res.statusCode}${detail}`,
+                ),
+              ),
+            );
+          });
+          res.on('error', (e) => finish(() => reject(new AgentError(`${where}: ${e.message}`))));
+          return;
         }
         const chunks: Buffer[] = [];
         let size = 0;

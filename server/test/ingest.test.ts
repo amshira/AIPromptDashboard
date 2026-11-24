@@ -12,7 +12,7 @@ let sourceId = 0;
 
 beforeAll(async () => {
   t = await startTestDb(54329);
-  const db = src.open('hotelcontract');
+  const db = src.open('catalog');
   const h1 = [u('<system-reminder>mem</system-reminder>\nسلام، یه PR رو ریویو کن')];
   const h2 = [...h1, a('باشه، شروع می‌کنم'), u('ممنون')];
   src.insert(db, { id: 'r1', timestamp: T(0), data: req(h1, { prompt_tokens: 100, completion_tokens: 10 }) });
@@ -35,7 +35,7 @@ beforeAll(async () => {
   src.insert(db, { id: 't1', timestamp: T(5), data: { tokens: { prompt_tokens: 7, completion_tokens: 1 }, request: { _truncated: true, _originalSize: 5_000_000, _preview: 'abc' } } });
   db.close();
   await discoverSources(t.pool, src.root);
-  sourceId = (await t.pool.query("SELECT id FROM sources WHERE name='hotelcontract'")).rows[0].id;
+  sourceId = (await t.pool.query("SELECT id FROM sources WHERE name='catalog'")).rows[0].id;
 });
 afterAll(async () => {
   await t.stop();
@@ -89,11 +89,11 @@ describe('ingest', () => {
     const u = await t.pool.query(`SELECT fingerprint FROM users`);
     expect(u.rows.map((x) => x.fingerprint)).toEqual(['source']);
     const c = await t.pool.query(`SELECT machine_user FROM conversations WHERE external_session_id IS NOT NULL`);
-    expect(c.rows.every((x) => x.machine_user === 'P.Sahebi.ABNOOSGASHT')).toBe(true);
+    expect(c.rows.every((x) => x.machine_user === 'P.Ng.CORP')).toBe(true);
   });
 
   it('picks up an updated row inside the overlap window', async () => {
-    const db = src.open('hotelcontract');
+    const db = src.open('catalog');
     src.insert(db, { id: 'r3', timestamp: T(2), data: req([u('x')], { prompt_tokens: 999, completion_tokens: 77 }) });
     db.close();
     await syncSource(t.pool, src.root, sourceId, 'manual');
@@ -102,7 +102,7 @@ describe('ingest', () => {
   });
 
   it('flags a gap when the source rotated past our cursor', async () => {
-    const db = src.open('hotelcontract');
+    const db = src.open('catalog');
     db.exec('DELETE FROM requestDetails');
     src.insert(db, { id: 'late', timestamp: new Date(Date.UTC(2026, 9, 27)).toISOString(), data: req([u('later')]) });
     db.close();
@@ -124,27 +124,27 @@ describe('people and conversations', () => {
   beforeAll(async () => {
     t2 = await startTestDb(54335);
     const db = s2.open('team');
-    s2.key(db, 'k-amin', 'sk-secret-amin-0001', 'ClaudeAmin');
-    s2.key(db, 'k-hotel', 'sk-secret-hotel-0002', 'ClaudeHotel');
+    s2.key(db, 'k-other', 'sk-secret-other-0001', 'ClaudeOther');
+    s2.key(db, 'k-shop', 'sk-secret-shop-0002', 'ClaudeShop');
     const first = [u('<system-reminder>ctx</system-reminder>\nیک API بساز')];
     const turn2 = [...first, a('ساختم'), u('تست هم بنویس')];
     // two Claude Code processes on two machines, same key: one person
     s2.insert(db, { id: 'p1', timestamp: at(0), data: req(first, { prompt_tokens: 1, completion_tokens: 11, cache_read_input_tokens: 500 }, {}, { session: 's-1' }) });
-    s2.usage(db, at(0), 'sk-secret-hotel-0002', 11, 500);
+    s2.usage(db, at(0), 'sk-secret-shop-0002', 11, 500);
     // a subagent of the same session (no Agent tool, its own first turn written by Claude)
     s2.insert(db, { id: 'sa1', timestamp: at(1), data: req([u('Find the handlers and report paths.')], { prompt_tokens: 1, completion_tokens: 12 }, {}, { session: 's-1', tools: ['Bash', 'Read'] }) });
-    s2.usage(db, at(1), 'sk-secret-hotel-0002', 12);
+    s2.usage(db, at(1), 'sk-secret-shop-0002', 12);
     s2.insert(db, { id: 'p2', timestamp: at(2), data: req(turn2, { prompt_tokens: 1, completion_tokens: 13, cache_read_input_tokens: 900 }, {}, { session: 's-1' }) });
-    s2.usage(db, at(2), 'sk-secret-hotel-0002', 13, 900);
+    s2.usage(db, at(2), 'sk-secret-shop-0002', 13, 900);
     // the 9router dropped the body of a huge request: it follows the prompt cache to s-1
     s2.insert(db, { id: 'big', timestamp: at(3), data: { tokens: { prompt_tokens: 4, completion_tokens: 14, cache_read_input_tokens: 905 }, request: { _truncated: true, _originalSize: 2e6, _preview: '{"messages":[' } } });
-    s2.usage(db, at(3), 'sk-secret-hotel-0002', 14, 905);
+    s2.usage(db, at(3), 'sk-secret-shop-0002', 14, 905);
     // another chat of the other key, at the same time
     s2.insert(db, { id: 'o1', timestamp: at(3, 30), data: req([u('سلام از امین')], { prompt_tokens: 1, completion_tokens: 15 }, {}, { session: 's-2' }) });
-    s2.usage(db, at(3, 30), 'sk-secret-amin-0001', 15);
+    s2.usage(db, at(3, 30), 'sk-secret-other-0001', 15);
     // auto-mode classifier of s-1: tokens go to the conversation, no messages
     s2.insert(db, { id: 'cl1', timestamp: at(4), data: { tokens: { prompt_tokens: 50, completion_tokens: 1 }, request: { max_tokens: 2112, metadata: metaFor('s-1'), messages: [u('<transcript>\n{"user":"x"}\n</transcript>')] } } });
-    s2.usage(db, at(4), 'sk-secret-hotel-0002', 1);
+    s2.usage(db, at(4), 'sk-secret-shop-0002', 1);
     db.close();
     await discoverSources(t2.pool, s2.root);
     sid = (await t2.pool.query("SELECT id FROM sources WHERE name='team'")).rows[0].id;
@@ -160,7 +160,7 @@ describe('people and conversations', () => {
   it('identifies people by api key name, without storing the secret', async () => {
     const r = await t2.pool.query(`SELECT r.id, u.hint, r.api_key FROM requests r JOIN users u ON u.id=r.user_id ORDER BY r.id`);
     const by = Object.fromEntries(r.rows.map((x) => [x.id, x.hint]));
-    expect(by).toMatchObject({ p1: 'ClaudeHotel', p2: 'ClaudeHotel', sa1: 'ClaudeHotel', big: 'ClaudeHotel', o1: 'ClaudeAmin', cl1: 'ClaudeHotel' });
+    expect(by).toMatchObject({ p1: 'ClaudeShop', p2: 'ClaudeShop', sa1: 'ClaudeShop', big: 'ClaudeShop', o1: 'ClaudeOther', cl1: 'ClaudeShop' });
     expect((await t2.pool.query(`SELECT count(*)::int n FROM users`)).rows[0].n).toBe(2);
     const dump = JSON.stringify((await t2.pool.query('SELECT * FROM requests')).rows) + JSON.stringify((await t2.pool.query('SELECT * FROM users')).rows);
     expect(dump).not.toContain('sk-secret');

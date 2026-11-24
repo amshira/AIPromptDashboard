@@ -240,7 +240,9 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		s.log.Printf("%s: %v", r.URL.Path[len(base):], err)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

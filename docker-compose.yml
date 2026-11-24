@@ -33,8 +33,8 @@ services:
       # Read-only: the dashboard never writes to a 9router's files.
       # Point these at your 9router trees via .env; local defaults are empty example dirs.
       - ${SOURCES_USERS:-./sources/users}:/sources/users:ro
-      - ${SOURCES_TEAM:-./sources/example-team}:/sources/example-team:ro
-      - ${SOURCES_PANEL:-./sources/example-panel}:/sources/example-panel:ro
+      - ${SOURCES_TEAM:-./sources/example-team}:/sources/${SOURCES_TEAM_NAME:-example-team}:ro
+      - ${SOURCES_PANEL:-./sources/example-panel}:/sources/${SOURCES_PANEL_NAME:-example-panel}:ro
     networks:
       - default
       - routers

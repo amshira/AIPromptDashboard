@@ -97,7 +97,7 @@ describe('record parsing', () => {
     tokens: { prompt_tokens: 4, completion_tokens: 271, cache_read_input_tokens: 70000, cache_creation_input_tokens: 500 },
     latency: { ttft: 800, total: 5200 },
     request: {
-      system: [{ type: 'text', text: 'You are Claude Code. Working directory: C:\\Users\\P.Sahebi.ABNOOSGASHT\\source\\repos\\HotelContract-Backend' }],
+      system: [{ type: 'text', text: 'You are Claude Code. Working directory: C:\\Users\\P.Ng.CORP\\source\\repos\\Catalog-Backend' }],
       tools: [{ name: 'Bash' }, { name: 'Agent' }],
       metadata: { user_id: 'user_dead01_account_aaaa_session_bbbb' },
       messages: [{ role: 'user', content: [{ type: 'text', text: 'چرا کامنتی روی پول رکوست نمیزاری؟' }] }],
@@ -108,7 +108,7 @@ describe('record parsing', () => {
   it('extracts tokens, identity and session', () => {
     const r = parseRow(row(main))!;
     expect(r.tokens).toEqual({ input: 4, output: 271, cacheRead: 70000, cacheWrite: 500 });
-    expect(r.userHint).toBe('P.Sahebi.ABNOOSGASHT');
+    expect(r.userHint).toBe('P.Ng.CORP');
     expect(r.externalSessionId).toBe('bbbb');
     expect(r.kind).toBe('main');
     expect(r.history[0]).toMatchObject({ kind: 'human', text: 'چرا کامنتی روی پول رکوست نمیزاری؟' });

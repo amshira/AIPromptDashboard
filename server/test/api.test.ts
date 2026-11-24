@@ -24,7 +24,7 @@ beforeAll(async () => {
   t = await startTestDb(54330);
   const cfg = { ...loadConfig({}), adminPassword: 'correct-horse', superPassword: 'super-horse-99', sourcesDir: src.root, webDir: '/nonexistent' };
   app = await buildApp(t.pool, cfg, { logger: false });
-  const db = src.open('flytoday');
+  const db = src.open('acme');
   const h1 = [u('سلام')];
   src.insert(db, { id: 'a1', timestamp: iso(0, -10), model: 'claude-opus-5-5', data: req(h1, { prompt_tokens: 100, completion_tokens: 20 }) });
   src.insert(db, { id: 'a2', timestamp: iso(0, -5), model: 'claude-sonnet-5-5', data: req([...h1, a('هی'), u('بگو')], { prompt_tokens: 200, completion_tokens: 40 }) });

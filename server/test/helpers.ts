@@ -60,7 +60,7 @@ export function makeSourceDir() {
   return { root, open, insert, key, usage };
 }
 
-export const SYS = [{ type: 'text', text: 'You are Claude Code. cwd: C:\\Users\\P.Sahebi.ABNOOSGASHT\\repos\\HC' }];
+export const SYS = [{ type: 'text', text: 'You are Claude Code. cwd: C:\\Users\\P.Ng.CORP\\repos\\app' }];
 export const META = { user_id: 'user_dead01_account_aaaa1111-0000-0000-0000-000000000000_session_bbbb2222-0000-0000-0000-000000000000' };
 export const metaFor = (session: string) => ({ user_id: JSON.stringify({ device_id: 'dead01', account_uuid: '', session_id: session }) });
 

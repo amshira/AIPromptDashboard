@@ -323,10 +323,11 @@ func (s *cursorStore) index(p profile) (*dbIndex, error) {
 		return ix, nil
 	}
 
-	db, err := openReadOnly(p.db)
+	db, cleanup, err := openReadOnly(p.db)
 	if err != nil {
 		return nil, err
 	}
+	defer cleanup()
 	defer db.Close()
 	ix.Email, ix.Plan = cursorAccount(db)
 	q, err := db.Query(`SELECT substr(key, 14),
@@ -402,10 +403,11 @@ func (s *cursorStore) index(p profile) (*dbIndex, error) {
 
 // build reads only the chats of a page and returns its rows with their text.
 func (s *cursorStore) build(p profile, page []rowMeta) ([]Row, error) {
-	db, err := openReadOnly(p.db)
+	db, cleanup, err := openReadOnly(p.db)
 	if err != nil {
 		return nil, err
 	}
+	defer cleanup()
 	defer db.Close()
 	type loaded struct {
 		c    composer
@@ -419,11 +421,12 @@ func (s *cursorStore) build(p profile, page []rowMeta) ([]Row, error) {
 		if !ok {
 			var raw []byte
 			if err := db.QueryRow(`SELECT value FROM cursorDiskKV WHERE key = ?`, "composerData:"+r.Chat).Scan(&raw); err != nil {
-				return nil, fmt.Errorf("chat %s is gone", r.Chat)
+				// deleted or compacted since the index was built: skip this turn, do not 500 the whole page
+				continue
 			}
 			l = &loaded{}
 			if err := json.Unmarshal(raw, &l.c); err != nil {
-				return nil, err
+				continue
 			}
 			l.msgs = chatMessages(db, &l.c)
 			chats[r.Chat] = l
@@ -499,10 +502,32 @@ func (s *cursorStore) saveIndex(db string, ix *dbIndex) {
 	}
 }
 
-func openReadOnly(file string) (*sql.DB, error) {
-	// mode=ro + query_only: never write. nolock: do not take SQLite's Windows share lock, so Cursor can
-	// quit or self-update while we read. A torn page is skipped when the JSON fails to parse.
-	dsn := "file:" + filepath.ToSlash(file) + "?mode=ro&nolock=1&_pragma=busy_timeout(5000)&_pragma=query_only(true)"
+func openReadOnly(file string) (*sql.DB, func(), error) {
+	nop := func() {}
+	snap, cleanup, err := snapshotSQLite(file)
+	if err == nil {
+		db, err := openSQLite(snap, false)
+		if err == nil {
+			return db, cleanup, nil
+		}
+		cleanup()
+	}
+	// live file: nolock so Cursor can keep writing; a torn WAL is why rows() used to 500
+	db, err2 := openSQLite(file, true)
+	if err2 != nil {
+		if err != nil {
+			return nil, nop, fmt.Errorf("%v (also live: %w)", err, err2)
+		}
+		return nil, nop, err2
+	}
+	return db, nop, nil
+}
+
+func openSQLite(file string, nolock bool) (*sql.DB, error) {
+	dsn := "file:" + filepath.ToSlash(file) + "?mode=ro&_pragma=busy_timeout(5000)&_pragma=query_only(true)"
+	if nolock {
+		dsn += "&nolock=1"
+	}
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
@@ -510,6 +535,27 @@ func openReadOnly(file string) (*sql.DB, error) {
 	db.SetMaxOpenConns(1)
 	return db, nil
 }
+
+func snapshotSQLite(src string) (string, func(), error) {
+	dir, err := os.MkdirTemp("", "pd-c-")
+	if err != nil {
+		return "", nil, err
+	}
+	cleanup := func() { _ = os.RemoveAll(dir) }
+	base := filepath.Join(dir, filepath.Base(src))
+	for _, extra := range []string{"", "-wal", "-shm"} {
+		from := src + extra
+		if _, err := os.Stat(from); err != nil {
+			continue
+		}
+		if err := copyFile(from, base+extra); err != nil {
+			cleanup()
+			return "", nil, err
+		}
+	}
+	return base, cleanup, nil
+}
+
 
 // ---------- one chat ----------
 

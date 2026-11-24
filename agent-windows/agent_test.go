@@ -76,7 +76,7 @@ func ms(t time.Time) float64 { return float64(t.UnixMilli()) }
 
 func TestSourcesDoesNotReopenCursorWhileWalGrows(t *testing.T) {
 	users := t.TempDir()
-	c := newProfile(t, users, "A.Nazari")
+	c := newProfile(t, users, "A.User")
 	id := c.blob(map[string]any{"role": "user", "content": []any{map[string]any{"type": "text", "text": "<user_query>hi</user_query>"}}})
 	c.put("composerData:chat-1", map[string]any{
 		"composerId": "chat-1", "lastUpdatedAt": ms(time.Now()), "conversationState": state(id),
@@ -94,7 +94,7 @@ func TestSourcesDoesNotReopenCursorWhileWalGrows(t *testing.T) {
 	if parses == 0 {
 		t.Fatal("first sources() should build the index")
 	}
-	wal := filepath.Join(users, "A.Nazari", cursorDB+"-wal")
+	wal := filepath.Join(users, "A.User", cursorDB+"-wal")
 	if err := os.WriteFile(wal, []byte("grown"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -112,11 +112,11 @@ func TestSourcesDoesNotReopenCursorWhileWalGrows(t *testing.T) {
 
 func TestCursorChatsBecomeTurns(t *testing.T) {
 	users := t.TempDir()
-	c := newProfile(t, users, "P.Sahebi")
+	c := newProfile(t, users, "P.Ng")
 	now := time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC)
 	ids := [][]byte{
 		c.blob(map[string]any{"role": "system", "content": "You are an AI coding assistant"}),
-		c.blob(map[string]any{"role": "user", "content": "<user_info>OS: win32, workspace C:\\Users\\P.Sahebi\\repo</user_info>"}),
+		c.blob(map[string]any{"role": "user", "content": "<user_info>OS: win32, workspace C:\\Users\\P.Ng\\repo</user_info>"}),
 		c.blob(map[string]any{"role": "user", "content": []any{map[string]any{"type": "text", "text": "<timestamp>Wednesday, Nov 11, 2026, 11:30 AM (UTC+3:30)</timestamp>\n<user_query>\nچرا تست خطا می‌ده؟\n</user_query>"}}}),
 		c.blob(map[string]any{"role": "assistant", "content": []any{
 			map[string]any{"type": "reasoning", "text": "look at the test"},
@@ -141,10 +141,10 @@ func TestCursorChatsBecomeTurns(t *testing.T) {
 	st.now = func() time.Time { return now }
 	src, _ := st.sources()
 	list := src["sources"].([]sourceInfo)
-	if len(list) != 1 || list[0].Name != "cursor-p.sahebi" || list[0].Chats != 1 {
+	if len(list) != 1 || list[0].Name != "cursor-p.ng" || list[0].Chats != 1 {
 		t.Fatalf("sources: %+v", list)
 	}
-	rows, err := st.rows("cursor-p.sahebi", "", "", 50)
+	rows, err := st.rows("cursor-p.ng", "", "", 50)
 	if err != nil || len(rows) != 2 {
 		t.Fatalf("rows: %v %d", err, len(rows))
 	}
@@ -168,7 +168,7 @@ func TestCursorChatsBecomeTurns(t *testing.T) {
 	if err := json.Unmarshal([]byte(rows[0].Data), &d); err != nil {
 		t.Fatal(err)
 	}
-	if d.Client != "cursor" || !strings.Contains(d.Request.System, `\Users\P.Sahebi\`) || !strings.Contains(d.Request.Metadata.UserID, `"session_id":"chat-1"`) {
+	if d.Client != "cursor" || !strings.Contains(d.Request.System, `\Users\P.Ng\`) || !strings.Contains(d.Request.Metadata.UserID, `"session_id":"chat-1"`) {
 		t.Fatalf("meta: %+v", d)
 	}
 	// system prompt left out; context as a reminder; the typed text alone; tool output whole
@@ -206,7 +206,7 @@ func TestCursorChatsBecomeTurns(t *testing.T) {
 		t.Fatalf("tokens: %+v", tk.Tokens)
 	}
 	// paging: strictly after (ts, id)
-	if more, _ := st.rows("cursor-p.sahebi", rows[0].Timestamp, rows[0].ID, 50); len(more) != 1 || more[0].ID != rows[1].ID {
+	if more, _ := st.rows("cursor-p.ng", rows[0].Timestamp, rows[0].ID, 50); len(more) != 1 || more[0].ID != rows[1].ID {
 		t.Fatalf("paging: %+v", more)
 	}
 	if _, err := st.rows("cursor-..\\..\\windows", "", "", 5); err != errUnknownSource {
@@ -504,7 +504,7 @@ func TestOnlyAllowedAddressesConnect(t *testing.T) {
 
 func TestConfig(t *testing.T) {
 	dir := t.TempDir()
-	cfg, err := newConfig(dir, []string{"172.23.3.105"}, 0)
+	cfg, err := newConfig(dir, []string{"10.1.2.10"}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

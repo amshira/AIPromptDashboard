@@ -34,11 +34,10 @@ These rows match the Overview picture. They are invented users on invented sourc
 
 | User (Windows profile) | Source | Messages | Input tokens | Output tokens |
 | --- | --- | --- | ---: | ---: |
-| M.Karimi | flytoday | 312 | 1.10M | 240k |
-| S.Rezaei | flytoday | 288 | 980k | 210k |
-| P.Sahebi | hotel | 241 | 860k | 188k |
-| A.Moradi | parto | 256 | 740k | 152k |
-| N.Hosseini | devops | 187 | 520k | 100k |
+| M.Lee | north | 312 | 1.10M | 240k |
+| S.Park | south | 288 | 980k | 210k |
+| P.Ng | east | 241 | 860k | 188k |
+| A.Cole | west | 256 | 740k | 152k |
 
 **One turn** (what ingest stores after it reads a 9router row)
 
@@ -52,9 +51,9 @@ These rows match the Overview picture. They are invented users on invented sourc
     "client": "cursor",
     "tokens": { "input_tokens": 6100, "output_tokens": 780, "cache_read_input_tokens": 36000 },
     "request": {
-      "system": "Claude Code. cwd: C:\\Users\\M.Karimi\\repos\\app",
+      "system": "Claude Code. cwd: C:\\Users\\M.Lee\\repos\\app",
       "messages": [
-        { "role": "user", "content": [{ "type": "text", "text": "Fix the failing unit test in BookingService.spec.ts" }] },
+        { "role": "user", "content": [{ "type": "text", "text": "Fix the failing unit test in InventoryService.spec.ts" }] },
         { "role": "assistant", "content": [
           { "type": "text", "text": "I'll start by reading the test." },
           { "type": "tool_use", "name": "Bash", "input": { "command": "git diff main...HEAD --stat" } }
@@ -67,14 +66,18 @@ These rows match the Overview picture. They are invented users on invented sourc
 
 The dashboard turns that into blocks (human / assistant / tool), hashes each message so the same prefix is not stored again, and attributes the person from a `C:\\Users\\<name>` path in the system text.
 
-**Panels table** (same four gateways as the picture)
+**Panels table** (same mixed 9router + Windows rows as the picture)
 
-| Status | Panel | Group | Panel / API | Quota | Today |
+| Status | Name | Kind | Group / PC | Access | Activity |
 | --- | --- | --- | --- | --- | ---: |
-| Up | m.karimi | flytoday | api.karimi.example.org | karimi.example.org | 42 req · 110k tok |
-| Up | s.rezaei | flytoday | api.rezaei.example.org | rezaei.example.org | 61 req · 148k tok |
-| Up | hotelcontract | hotel | claude.hotel.example.org | hotel.example.org | 54 req · 97k tok |
-| Up | n.hosseini | devops | api.hosseini.example.org | hosseini.example.org | 29 req · 57k tok |
+| Up | north | 9router | north | api.lee.example.org | 42 req · 110k tok |
+| Up | south | 9router | south | api.park.example.org | 61 req · 148k tok |
+| Up | east | 9router | east | api.east.example.org | 54 req · 97k tok |
+| Up | west | 9router | west | api.cole.example.org | 29 req · 57k tok |
+| Up | CORP\M.Lee | Cursor | DESKTOP-ALPHA | m.lee@example.org | 18 chats |
+| Up | CORP\S.Park | Cursor | DESKTOP-ALPHA | s.park@example.org | 11 chats |
+| Up | CORP\A.Cole | Cursor | LAPTOP-BETA | a.cole@example.org | 9 chats |
+| Up | CORP\A.Cole | Codex | LAPTOP-BETA | 10.1.2.11:14538 | 4 chats |
 
 Click **Up / No domain / No password**, a group chip, or the search box to filter that table. Passwords are AES-256-GCM in Postgres and only appear after Show or Copy.
 
@@ -94,7 +97,7 @@ flowchart LR
   PD --> UI["Overview · Conversations · Reports · Panels"]
 ```
 
-- Each folder under `/sources` (up to 5 levels) that contains `data.sqlite` is a source. Per-user 9routers of the form `…/<org>users/<user>` show up as `<org>/<user>` (example: `flytoday/m.karimi`).
+- Each folder under `/sources` (up to 5 levels) that contains `data.sqlite` is a source. Per-user 9routers of the form `…/<org>users/<user>` show up as `<org>/<user>` (example: `acme/j.doe`).
 - The app opens those databases **read-only**. It does not use the Docker socket, does not exec into 9router, and does not restart anything.
 - If a 9router folder disappears, the panel is marked “removed from the server”; history stays until you purge it in Settings.
 - Windows: `pd-agent` listens on the PC. The dashboard pulls `cursor-*` and `codex-*` sources. Codex is `%USERPROFILE%\.codex` rollout JSONL; `auth.json` is never opened.
@@ -172,7 +175,7 @@ npm -w web run dev
 npm -w server run dev:fixture
 ```
 
-That fixture is what the README pictures are drawn from (flytoday, hotel, parto, devops).
+That fixture is what the README pictures are drawn from (sample 9routers plus two Windows PCs).
 
 ## Layout
 

@@ -217,9 +217,12 @@ function PcCard({
           </div>
           {computer && pc.label !== computer && <div className="text-[11.5px] text-ink-3">{pc.label}</div>}
         </div>
-        <button className="btn btn-ghost btn-icon btn-sm shrink-0" onClick={onDelete} aria-label={t(`حذف ${computer || pc.label}`, `Remove ${computer || pc.label}`)} title={t('حذف از داشبورد', 'Remove from dashboard')}>
-          <Trash2 size={14} />
-        </button>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <StopAgentButton pc={pc} latest={latest} stopping={stopping} onStop={onStop} iconOnly />
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onDelete} aria-label={t(`حذف ${computer || pc.label}`, `Remove ${computer || pc.label}`)} title={t('حذف از داشبورد', 'Remove from dashboard')}>
+            <Trash2 size={14} />
+          </button>
+        </div>
       </header>
       <div className={cx('text-[12px]', pc.last_error ? 'text-bad' : 'text-ink-3')}>{state}</div>
 
@@ -263,35 +266,34 @@ function PcCard({
           })}
         </ul>
       )}
-      <AgentUpdate pc={pc} latest={latest} busy={busy} onUpdate={onUpdate} onStop={onStop} stopping={stopping} />
+      <AgentUpdate pc={pc} latest={latest} busy={busy} onUpdate={onUpdate} />
     </article>
   );
 }
 
-export function AgentUpdate({
+export function StopAgentButton({
   pc,
   latest,
-  busy,
-  onUpdate,
-  onStop,
   stopping,
+  onStop,
+  iconOnly,
 }: {
   pc: PcInfo;
   latest: { version: string; min: string; minStop?: string } | null;
-  busy: boolean;
-  onUpdate: () => void;
-  onStop?: () => void;
   stopping?: boolean;
+  onStop: () => void;
+  iconOnly?: boolean;
 }) {
   const { t } = useI18n();
   const running = pc.info?.agent?.version;
   const minStop = latest?.minStop ?? '1.7.4';
-  const canStop = !!onStop && !!running && cmpVersion(running, minStop) >= 0 && pc.enabled && !stopping && !busy;
-  const stopBtn = onStop && (
+  const canStop = !!running && cmpVersion(running, minStop) >= 0 && pc.enabled && !stopping;
+  return (
     <button
-      className="btn btn-sm self-start"
+      className={iconOnly ? 'btn btn-ghost btn-icon btn-sm hover:!text-bad' : 'btn btn-sm self-start'}
       onClick={onStop}
       disabled={!canStop}
+      aria-label={t('توقف سرویس', 'Stop service')}
       title={
         !running
           ? t('نسخه agent هنوز خوانده نشده.', 'The agent version has not been read yet.')
@@ -301,37 +303,41 @@ export function AgentUpdate({
       }
     >
       {stopping ? <Spinner size={13} /> : <Square size={13} />}
-      {t(' توقف سرویس', ' Stop service')}
+      {!iconOnly && t(' توقف سرویس', ' Stop service')}
     </button>
   );
-  if (!latest) return stopBtn ? <div className="flex flex-wrap gap-1.5">{stopBtn}</div> : null;
+}
+
+export function AgentUpdate({
+  pc,
+  latest,
+  busy,
+  onUpdate,
+}: {
+  pc: PcInfo;
+  latest: { version: string; min: string; minStop?: string } | null;
+  busy: boolean;
+  onUpdate: () => void;
+}) {
+  const { t } = useI18n();
+  const running = pc.info?.agent?.version;
+  if (!latest) return null;
   if (!running) return <p className="m-0 text-[12px] text-ink-3 leading-5">{t('نسخه agent هنوز خوانده نشده. «بررسی دوباره» را بزنید.', 'The agent version has not been read yet. Click “Check again”.')}</p>;
   if (cmpVersion(running, latest.min) < 0) {
     return (
       <div className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap gap-1.5">
-          <button className="btn btn-sm self-start" disabled>
-            <Download size={13} />{t(' به‌روزرسانی agent', ' Update agent')}
-          </button>
-          {stopBtn}
-        </div>
+        <button className="btn btn-sm self-start" disabled>
+          <Download size={13} />{t(' به‌روزرسانی agent', ' Update agent')}
+        </button>
         <p className="m-0 text-[11.5px] text-ink-3 leading-5">{t(`نسخه ${running} این کار را بلد نیست. یک بار دستور نصب را روی همین کامپیوتر دوباره اجرا کنید تا به ${latest.min} برسد؛ بعد از آن همین دکمه فایل جدید را می‌فرستد و سرویس را دوباره اجرا می‌کند.`, `Version ${running} cannot be updated from this button. Run the install command once on this computer to reach ${latest.min}; after that, this button sends the new file and restarts the service.`)}</p>
       </div>
     );
   }
   if (cmpVersion(latest.version, running) <= 0)
-    return (
-      <div className="flex flex-col gap-1.5">
-        <p className="m-0 text-[12px] text-good">{t(`agent به‌روز است (${running})`, `agent is up to date (${running})`)}</p>
-        {stopBtn}
-      </div>
-    );
+    return <p className="m-0 text-[12px] text-good">{t(`agent به‌روز است (${running})`, `agent is up to date (${running})`)}</p>;
   return (
-    <div className="flex flex-wrap gap-1.5">
-      <button className="btn btn-primary btn-sm self-start" onClick={onUpdate} disabled={busy || !pc.enabled || stopping}>
-        {busy ? <Spinner size={13} /> : <Download size={13} />}{t(` به‌روزرسانی به ${latest.version}`, ` Update to ${latest.version}`)}
-      </button>
-      {stopBtn}
-    </div>
+    <button className="btn btn-primary btn-sm self-start" onClick={onUpdate} disabled={busy || !pc.enabled}>
+      {busy ? <Spinner size={13} /> : <Download size={13} />}{t(` به‌روزرسانی به ${latest.version}`, ` Update to ${latest.version}`)}
+    </button>
   );
 }

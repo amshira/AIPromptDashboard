@@ -1,4 +1,4 @@
-module github.com/flytoday/promptdashboard/agent-windows
+module github.com/example/promptdashboard/agent-windows
 
 go 1.27.3
 

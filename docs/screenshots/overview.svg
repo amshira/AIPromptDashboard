@@ -32,12 +32,12 @@
     <text x="952" y="170" font-size="11" fill="#006300">74% cache hit</text>
     <rect x="1108" y="96" width="148" height="88" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
     <text x="1124" y="118" font-size="12" fill="#6f6d67">People</text>
-    <text x="1124" y="148" font-size="26" font-weight="800" fill="#15140f">5</text>
+    <text x="1124" y="148" font-size="26" font-weight="800" fill="#15140f">4</text>
     <text x="1124" y="170" font-size="11" fill="#6f6d67">OS accounts</text>
   </g>
   <rect x="248" y="204" width="1008" height="268" rx="14" fill="#fcfcfb" stroke="#e1e0d9"/>
   <text x="268" y="232" font-family="Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#15140f">Daily tokens by source</text>
-  <text x="268" y="252" font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">Stacked · flytoday · hotel · parto · devops</text>
+  <text x="268" y="252" font-family="Segoe UI, sans-serif" font-size="11" fill="#6f6d67">Stacked · north · south · east · west</text>
   <g transform="translate(280,270)">
     <line x1="0" y1="170" x2="940" y2="170" stroke="#e1e0d9"/>
     <rect x="20" y="70" width="88" height="100" fill="#2a78d6"/><rect x="20" y="42" width="88" height="28" fill="#eb6834"/><rect x="20" y="22" width="88" height="20" fill="#1baf7a"/>
@@ -59,10 +59,9 @@
     <text x="620" y="548" fill="#6f6d67" font-weight="600">Messages</text>
     <text x="780" y="548" fill="#6f6d67" font-weight="600">Input</text>
     <text x="940" y="548" fill="#6f6d67" font-weight="600">Output</text>
-    <text x="268" y="576" fill="#15140f" font-weight="600">M.Karimi</text><text x="460" y="576" fill="#52514e">flytoday</text><text x="620" y="576" fill="#15140f">312</text><text x="780" y="576" fill="#15140f">1.10M</text><text x="940" y="576" fill="#15140f">240k</text>
-    <text x="268" y="604" fill="#15140f" font-weight="600">S.Rezaei</text><text x="460" y="604" fill="#52514e">flytoday</text><text x="620" y="604" fill="#15140f">288</text><text x="780" y="604" fill="#15140f">980k</text><text x="940" y="604" fill="#15140f">210k</text>
-    <text x="268" y="632" fill="#15140f" font-weight="600">P.Sahebi</text><text x="460" y="632" fill="#52514e">hotel</text><text x="620" y="632" fill="#15140f">241</text><text x="780" y="632" fill="#15140f">860k</text><text x="940" y="632" fill="#15140f">188k</text>
-    <text x="268" y="660" fill="#15140f" font-weight="600">A.Moradi</text><text x="460" y="660" fill="#52514e">parto</text><text x="620" y="660" fill="#15140f">256</text><text x="780" y="660" fill="#15140f">740k</text><text x="940" y="660" fill="#15140f">152k</text>
-    <text x="268" y="688" fill="#15140f" font-weight="600">N.Hosseini</text><text x="460" y="688" fill="#52514e">devops</text><text x="620" y="688" fill="#15140f">187</text><text x="780" y="688" fill="#15140f">520k</text><text x="940" y="688" fill="#15140f">100k</text>
+    <text x="268" y="576" fill="#15140f" font-weight="600">M.Lee</text><text x="460" y="576" fill="#52514e">north</text><text x="620" y="576" fill="#15140f">312</text><text x="780" y="576" fill="#15140f">1.10M</text><text x="940" y="576" fill="#15140f">240k</text>
+    <text x="268" y="604" fill="#15140f" font-weight="600">S.Park</text><text x="460" y="604" fill="#52514e">south</text><text x="620" y="604" fill="#15140f">288</text><text x="780" y="604" fill="#15140f">980k</text><text x="940" y="604" fill="#15140f">210k</text>
+    <text x="268" y="632" fill="#15140f" font-weight="600">P.Ng</text><text x="460" y="632" fill="#52514e">east</text><text x="620" y="632" fill="#15140f">241</text><text x="780" y="632" fill="#15140f">860k</text><text x="940" y="632" fill="#15140f">188k</text>
+    <text x="268" y="660" fill="#15140f" font-weight="600">A.Cole</text><text x="460" y="660" fill="#52514e">west</text><text x="620" y="660" fill="#15140f">256</text><text x="780" y="660" fill="#15140f">740k</text><text x="940" y="660" fill="#15140f">152k</text>
   </g>
 </svg>

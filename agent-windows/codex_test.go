@@ -56,7 +56,7 @@ func sampleTurn(session, t0, t1, prompt, answer string, in, cached, out int) []s
 func TestCodexChatsBecomeTurns(t *testing.T) {
 	users := t.TempDir()
 	sid := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-	writeRollout(t, users, "A.Nazari", sid, "rollout-2026-11-15T09-00-00-"+sid+".jsonl",
+	writeRollout(t, users, "A.User", sid, "rollout-2026-11-15T09-00-00-"+sid+".jsonl",
 		append(
 			sampleTurn(sid, "2026-11-15T09:00:00.000Z", "2026-11-15T09:00:05.000Z", "hello codex", "hi", 100, 20, 8),
 			envLine("2026-11-15T09:01:00.000Z", "response_item", map[string]any{
@@ -82,7 +82,7 @@ func TestCodexChatsBecomeTurns(t *testing.T) {
 			}),
 		)...,
 	)
-	_ = os.WriteFile(filepath.Join(users, "A.Nazari", ".codex", "auth.json"), []byte(`{"tokens":"secret"}`), 0o600)
+	_ = os.WriteFile(filepath.Join(users, "A.User", ".codex", "auth.json"), []byte(`{"tokens":"secret"}`), 0o600)
 
 	st := newCodexStore(users, 90*time.Second)
 	st.now = func() time.Time { return time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC) }
@@ -91,11 +91,11 @@ func TestCodexChatsBecomeTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	list := src["sources"].([]sourceInfo)
-	if len(list) != 1 || list[0].Name != "codex-a.nazari" || list[0].Kind != "codex" || list[0].Chats != 1 {
+	if len(list) != 1 || list[0].Name != "codex-a.user" || list[0].Kind != "codex" || list[0].Chats != 1 {
 		t.Fatalf("sources: %+v", list)
 	}
 
-	rows, err := st.rows("codex-a.nazari", "", "", 50)
+	rows, err := st.rows("codex-a.user", "", "", 50)
 	if err != nil || len(rows) != 2 {
 		t.Fatalf("rows: %v %d", err, len(rows))
 	}
@@ -121,7 +121,7 @@ func TestCodexChatsBecomeTurns(t *testing.T) {
 	}
 	req := d["request"].(map[string]any)
 	sys := req["system"].(string)
-	if !strings.Contains(sys, `C:\Users\A.Nazari\`) || strings.Contains(sys, "subagent") {
+	if !strings.Contains(sys, `C:\Users\A.User\`) || strings.Contains(sys, "subagent") {
 		t.Fatalf("system %q", sys)
 	}
 	msgs := req["messages"].([]any)

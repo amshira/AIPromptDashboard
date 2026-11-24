@@ -212,6 +212,10 @@ export async function syncSource(db: pg.Pool, dir: string, sourceId: number, tri
       const last = rows[rows.length - 1];
       lastTs = last.timestamp;
       lastId = last.id;
+      // keep the cursor even if this run later times out, so an 8-day catch-up can finish across ticks
+      if (maxTs) {
+        await db.query('UPDATE sources SET last_cursor_ts=$2, last_sync_at=now() WHERE id=$1', [sourceId, maxTs]);
+      }
       if (rows.length < size) break;
     }
     await db.query('UPDATE sources SET last_cursor_ts=$2, last_sync_at=now(), last_error=$3, gap_detected = gap_detected OR $4 WHERE id=$1', [

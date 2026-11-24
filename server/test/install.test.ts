@@ -20,7 +20,7 @@ const call = (method: 'GET' | 'POST' | 'DELETE', url: string, payload?: unknown,
   app.inject({ method, url, payload: payload as object, headers: { cookie, ...headers } });
 
 const code = (o: object) => 'pda1.' + Buffer.from(JSON.stringify(o)).toString('base64url');
-const pairing = { v: 1, host: 'IT-28', port: 47123, prefix: 'abcdefghijklmnopqrstuvwx', secret: 'ab'.repeat(32), cert: 'cd'.repeat(32) };
+const pairing = { v: 1, host: 'DESKTOP-01', port: 47123, prefix: 'abcdefghijklmnopqrstuvwx', secret: 'ab'.repeat(32), cert: 'cd'.repeat(32) };
 
 beforeAll(async () => {
   writeFileSync(join(bin, 'pd-agent.exe'), EXE);

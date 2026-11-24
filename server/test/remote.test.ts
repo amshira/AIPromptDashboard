@@ -117,18 +117,18 @@ describe('remote servers', () => {
     // discovery stores the agent's answer (a 9router agent has no "agent" part)
     expect((await t.pool.query('SELECT info FROM servers WHERE id=$1', [srv.id])).rows[0].info).toEqual({ agent: null, sources: [{ name: 'sales' }] });
 
-    const info = { agent: { host: 'IT-28', version: '1.1.0' }, sources: [{ name: 'cursor-a.nazari', profile: 'a.nazari', account: 'CORP\\a.nazari', email: 'a@x.org', chats: 8 }] };
+    const info = { agent: { host: 'DESKTOP-01', version: '1.1.0' }, sources: [{ name: 'cursor-a.user', profile: 'a.user', account: 'CORP\\a.user', email: 'a@example.org', chats: 8 }] };
     const pc = await t.pool.query(
-      `INSERT INTO servers(name,label,url,token,cert_sha256,info,last_seen_at) VALUES('it-28','IT-28','https://172.17.36.40:47123/abcdefghijklmnopqrstuvwx',$1,$2,$3,now()) RETURNING id`,
+      `INSERT INTO servers(name,label,url,token,cert_sha256,info,last_seen_at) VALUES('pc-01','pc-01','https://10.1.2.10:47123/abcdefghijklmnopqrstuvwx',$1,$2,$3,now()) RETURNING id`,
       ['ab'.repeat(32), 'cd'.repeat(32), JSON.stringify(info)],
     );
-    await t.pool.query(`INSERT INTO sources(name,label,server_id,remote_name) VALUES('it-28/cursor-a.nazari','IT-28 / cursor-a.nazari',$1,'cursor-a.nazari')`, [pc.rows[0].id]);
+    await t.pool.query(`INSERT INTO sources(name,label,server_id,remote_name) VALUES('pc-01/cursor-a.user','pc-01 / cursor-a.user',$1,'cursor-a.user')`, [pc.rows[0].id]);
 
     const r = await call('GET', '/api/pcs');
     expect(r.statusCode).toBe(200);
     const pcs = r.json().pcs;
     expect(pcs).toHaveLength(1); // the 9router server is not a PC
-    expect(pcs[0]).toMatchObject({ name: 'it-28', info, sources: [{ remote_name: 'cursor-a.nazari', requests: 0 }] });
+    expect(pcs[0]).toMatchObject({ name: 'pc-01', info, sources: [{ remote_name: 'cursor-a.user', requests: 0 }] });
     // the HMAC key never leaves the server
     expect(JSON.stringify(pcs)).not.toContain('ab'.repeat(32));
     await t.pool.query('DELETE FROM servers WHERE id=$1', [pc.rows[0].id]);

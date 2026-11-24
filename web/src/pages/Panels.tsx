@@ -29,7 +29,7 @@ import { Confirm, cx, Empty, ErrorBox, Field, Modal, PageHeader, Skeleton, Spinn
 import { agentErrorText, api, errorText, get, PanelCheck, PanelInfo, PanelStatus, PcInfo, PcProfile, ServerInfo } from '../lib/api';
 import { compact, int, relative } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import { addressOf, AgentUpdate, isOnline } from './PcSection';
+import { addressOf, AgentUpdate, isOnline, StopAgentButton } from './PcSection';
 import { AddServerModal } from './Settings';
 
 type Kind = 'gateway' | 'pc' | 'cursor' | 'codex' | 'agent';
@@ -846,8 +846,6 @@ function AccessTable({
                         latest={latest}
                         busy={updatingId === pc.id}
                         onUpdate={() => onUpdatePc(pc.id)}
-                        onStop={() => onStopPc(pc)}
-                        stopping={stoppingId === pc.id}
                       />
                     ) : row.server?.last_error ? (
                       <span className="text-[11.5px] text-bad">{agentErrorText(row.server.last_error)}</span>
@@ -898,9 +896,12 @@ function AccessTable({
                         </button>
                       )}
                       {pc && (
-                        <button className="btn btn-ghost btn-icon btn-sm hover:!text-bad" onClick={() => onDeletePc(pc)} title={t('حذف کامپیوتر', 'Remove computer')}>
-                          <Trash2 size={14} />
-                        </button>
+                        <>
+                          <StopAgentButton pc={pc} latest={latest} stopping={stoppingId === pc.id} onStop={() => onStopPc(pc)} iconOnly />
+                          <button className="btn btn-ghost btn-icon btn-sm hover:!text-bad" onClick={() => onDeletePc(pc)} title={t('حذف کامپیوتر', 'Remove computer')}>
+                            <Trash2 size={14} />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -1061,7 +1062,7 @@ function EditModal({ panel, onClose, onDelete }: { panel: PanelInfo | 'new' | nu
           <Field label={t('نام', 'Name')}>
             <input className="input ltr" value={f.name} onChange={(e) => set('name', e.target.value)} required maxLength={80} />
           </Field>
-          <Field label={t('گروه / سازمان', 'Group / organization')} hint={t('مثل parto؛ خالی = مستقل', 'e.g. parto; empty = standalone')}>
+          <Field label={t('گروه / سازمان', 'Group / organization')} hint={t('مثل acme؛ خالی = مستقل', 'e.g. acme; empty = standalone')}>
             <input className="input ltr" value={f.org} onChange={(e) => set('org', e.target.value)} maxLength={40} />
           </Field>
         </div>

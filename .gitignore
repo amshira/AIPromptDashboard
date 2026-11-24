@@ -8,6 +8,7 @@ agent-bin
 .env
 .env.*
 !.env.example
+qouta/
 
 # compiled agent binaries
 *.exe
